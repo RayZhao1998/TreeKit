@@ -41,9 +41,10 @@ extension FileTreePath {
 
     return switch URL(fileURLWithPath: name).pathExtension.lowercased() {
     case "swift": "swift"
+    case "rs", "zig": "chevron.left.forwardslash.chevron.right"
     case "md": "doc.richtext"
     case "png", "jpg", "jpeg": "photo"
-    case "yml", "yaml": "gearshape.2"
+    case "json", "toml", "yml", "yaml": "gearshape.2"
     default: name == "Package.swift" ? "shippingbox" : "doc"
     }
   }
@@ -61,7 +62,8 @@ extension DemoGitStatus {
     switch self {
     case .modified: .orange
     case .added: .green
-    case .untracked: .blue
+    case .deleted: .red
+    case .renamed: .blue
     }
   }
 }

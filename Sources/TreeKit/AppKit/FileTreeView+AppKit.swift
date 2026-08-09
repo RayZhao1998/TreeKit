@@ -453,7 +453,7 @@ private extension FileTreeView {
                 depth: tree.depthByID[id] ?? 0,
                 parentID: tree.parentByID[id],
                 siblingIndex: tree.siblingIndexByID[id] ?? 0,
-                siblingCount: tree.siblingCountByID[id] ?? 1,
+                siblingCount: tree.siblingCount(of: id),
                 isExpandable: tree.isExpandable(id),
                 isExpanded: owner.model.expandedIDs.contains(id),
                 isSelected: owner.model.selection.contains(id),

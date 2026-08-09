@@ -31,6 +31,9 @@ struct PreparedTreeTests {
         #expect(tree.parentID(of: "App.swift") == "Sources")
         #expect(tree.depth(of: "Model.swift") == 2)
         #expect(tree.ancestorIDs(of: "Model.swift") == ["root", "Sources"])
+        #expect(tree.siblingCount(of: "root") == 1)
+        #expect(tree.siblingCount(of: "Sources") == 2)
+        #expect(tree.siblingCount(of: "App.swift") == 2)
         #expect(tree.isExpandable("Sources"))
         #expect(!tree.isExpandable("README.md"))
     }
@@ -143,6 +146,51 @@ struct FileTreeModelTests {
         #expect(model.selection == ["file"])
         #expect(model.focusedID == "file")
         #expect(model.visibleRows.map(\.id) == ["root", "folder", "file"])
+    }
+
+    @Test
+    func revealSplicesTheFirstNewAncestorSubtreeAndPreservesHiddenExpansion() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "root",
+                    children: [
+                        TestNode(
+                            id: "first",
+                            children: [
+                                TestNode(
+                                    id: "nested",
+                                    children: [TestNode(id: "target")]
+                                )
+                            ]
+                        ),
+                        TestNode(
+                            id: "second",
+                            children: [TestNode(id: "sibling")]
+                        )
+                    ]
+                )
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(tree)
+
+        // A hidden branch can be expanded before any of its ancestors become visible.
+        model.expand("nested")
+        #expect(model.visibleRows.map(\.id) == ["root"])
+
+        model.reveal("target")
+        #expect(model.expandedIDs == ["root", "first", "nested"])
+        #expect(model.visibleRows.map(\.id) == ["root", "first", "nested", "target", "second"])
+
+        // Revealing another branch inserts only its newly visible descendants while retaining
+        // the already materialized prefix and preorder.
+        model.reveal("sibling")
+        #expect(model.expandedIDs == ["root", "first", "nested", "second"])
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["root", "first", "nested", "target", "second", "sibling"]
+        )
     }
 
     @Test

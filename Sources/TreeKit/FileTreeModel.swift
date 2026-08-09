@@ -189,13 +189,15 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     ) {
         guard preparedTree.contains(id) else { return }
 
-        var nextExpansion = expandedIDs
+        var newlyExpandedAncestors: [Node.ID] = []
         for ancestorID in preparedTree.ancestorIDs(of: id) where preparedTree.isExpandable(ancestorID) {
-            nextExpansion.insert(ancestorID)
+            if !expandedIDs.contains(ancestorID) {
+                newlyExpandedAncestors.append(ancestorID)
+            }
         }
-        if nextExpansion != expandedIDs {
-            expandedIDs = nextExpansion
-            rebuildVisibleRows()
+        if let firstNewlyExpandedAncestor = newlyExpandedAncestors.first {
+            expandedIDs.formUnion(newlyExpandedAncestors)
+            insertVisibleDescendants(of: firstNewlyExpandedAncestor)
             expansionRevision &+= 1
         }
 
@@ -268,7 +270,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
                     depth: tree.depthByID[id] ?? 0,
                     parentID: tree.parentByID[id],
                     siblingIndex: tree.siblingIndexByID[id] ?? 0,
-                    siblingCount: tree.siblingCountByID[id] ?? 1
+                    siblingCount: tree.siblingCount(of: id)
                 )
             )
 

@@ -5,6 +5,7 @@ MODE="${1:-run}"
 APP_NAME="TreeKitDemo"
 BUNDLE_ID="software.trees.TreeKitDemo"
 MIN_SYSTEM_VERSION="13.0"
+BUILD_CONFIGURATION="${TREEKIT_BUILD_CONFIGURATION:-debug}"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEMO_PACKAGE="$ROOT_DIR/Demo"
@@ -17,13 +18,19 @@ INFO_PLIST="$APP_CONTENTS/Info.plist"
 
 pkill -x "$APP_NAME" >/dev/null 2>&1 || true
 
-swift build --package-path "$DEMO_PACKAGE"
-BUILD_BINARY="$(swift build --package-path "$DEMO_PACKAGE" --show-bin-path)/$APP_NAME"
+swift build --package-path "$DEMO_PACKAGE" -c "$BUILD_CONFIGURATION"
+BUILD_DIR="$(swift build --package-path "$DEMO_PACKAGE" -c "$BUILD_CONFIGURATION" --show-bin-path)"
+BUILD_BINARY="$BUILD_DIR/$APP_NAME"
+RESOURCE_BUNDLE="$BUILD_DIR/${APP_NAME}_${APP_NAME}.bundle"
 
 rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_MACOS"
 cp "$BUILD_BINARY" "$APP_BINARY"
 chmod +x "$APP_BINARY"
+
+if [[ -d "$RESOURCE_BUNDLE" ]]; then
+  cp -R "$RESOURCE_BUNDLE" "$APP_BUNDLE/"
+fi
 
 cat >"$INFO_PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>

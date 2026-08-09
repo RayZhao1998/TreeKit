@@ -47,7 +47,10 @@ struct SelectionDetailView: View {
       VStack(alignment: .leading, spacing: 2) {
         Text(renderer == .swiftUI ? "SwiftUI renderer" : "Native AppKit renderer")
           .font(.headline)
-        Text("Selection and expansion stay in the same FileTreeModel")
+        Text(
+          "\(DemoData.repository) PR #\(DemoData.pullRequest) · "
+            + "\(DemoData.changedFileCount.formatted()) changed files"
+        )
           .font(.caption)
           .foregroundStyle(.secondary)
       }

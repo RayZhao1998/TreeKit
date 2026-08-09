@@ -15,6 +15,9 @@ let package = Package(
       name: "TreeKitDemo",
       dependencies: [
         .product(name: "TreeKit", package: "TreeKit")
+      ],
+      resources: [
+        .process("Resources")
       ]
     )
   ],

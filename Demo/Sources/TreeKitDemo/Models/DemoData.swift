@@ -22,52 +22,60 @@ enum DemoRenderer: String, CaseIterable, Identifiable {
   }
 }
 
-enum DemoGitStatus: String, Sendable {
+enum DemoGitStatus: String, Decodable, Sendable {
   case modified = "M"
   case added = "A"
-  case untracked = "U"
+  case deleted = "D"
+  case renamed = "R"
 
   var title: String {
     switch self {
     case .modified: "Modified"
     case .added: "Added"
-    case .untracked: "Untracked"
+    case .deleted: "Deleted"
+    case .renamed: "Renamed"
     }
   }
 }
 
 enum DemoData {
-  static let paths = [
-    "Sources/TreeKit/AppKit/FileTreeView+AppKit.swift",
-    "Sources/TreeKit/UIKit/UIKitFileTreeView.swift",
-    "Sources/TreeKit/SwiftUI/FileTree.swift",
-    "Sources/TreeKit/TreeKit.docc/TreeKit.md",
-    "Sources/TreeKit/FileTreeConfiguration.swift",
-    "Sources/TreeKit/FileTreeModel.swift",
-    "Sources/TreeKit/FileTreePath.swift",
-    "Sources/TreeKit/FileTreeTypes.swift",
-    "Sources/TreeKit/PreparedTree.swift",
-    "Tests/TreeKitTests/FileTreeModelTests.swift",
-    "Tests/TreeKitTests/FileTreePathTests.swift",
-    "Tests/TreeKitTests/PreparedTreeTests.swift",
-    "Resources/Preview/TreeKit-Dark.png",
-    "Resources/Preview/TreeKit-Light.png",
-    "Resources/SampleProject/Assets.xcassets/",
-    "LICENSE",
-    "Package.swift",
-    "README.md",
-  ]
+  private struct Fixture: Decodable {
+    let repository: String
+    let pullRequest: Int
+    let title: String
+    let sourceURL: String
+    let changedFiles: Int
+    let files: [ChangedFile]
+  }
 
-  static let initialSelection = "Sources/TreeKit/FileTreeModel.swift"
-  static let revealTarget = "Sources/TreeKit/AppKit/FileTreeView+AppKit.swift"
+  private struct ChangedFile: Decodable {
+    let path: String
+    let status: DemoGitStatus
+  }
 
-  static let gitStatuses: [String: DemoGitStatus] = [
-    "Sources/TreeKit/FileTreeModel.swift": .modified,
-    "Sources/TreeKit/SwiftUI/FileTree.swift": .modified,
-    "Sources/TreeKit/UIKit/UIKitFileTreeView.swift": .added,
-    "Tests/TreeKitTests/FileTreePathTests.swift": .untracked,
-    "README.md": .modified,
-  ]
+  private static let fixture = loadFixture()
+
+  static let repository = fixture.repository
+  static let pullRequest = fixture.pullRequest
+  static let title = fixture.title
+  static let sourceURL = URL(string: fixture.sourceURL)!
+  static let changedFileCount = fixture.changedFiles
+  static let paths = fixture.files.map(\.path)
+  static let gitStatuses = Dictionary(
+    uniqueKeysWithValues: fixture.files.map { ($0.path, $0.status) }
+  )
+
+  static let initialSelection = "src/bun.zig"
+  static let revealTarget = "src/runtime/cli/cli.zig"
+  static let performanceTargets: [String] = {
+    let sampleCount = min(300, paths.count)
+    guard sampleCount > 1 else { return paths }
+
+    let forward = (0..<sampleCount).map { index in
+      paths[index * (paths.count - 1) / (sampleCount - 1)]
+    }
+    return forward + forward.reversed()
+  }()
 
   @MainActor
   static func makeModel() -> FileTreeModel<FileTreePath> {
@@ -79,6 +87,31 @@ enum DemoData {
       )
     } catch {
       fatalError("Invalid demo tree: \(error.localizedDescription)")
+    }
+  }
+
+  private static func loadFixture() -> Fixture {
+    guard let url = Bundle.module.url(
+      forResource: "BunPR30412",
+      withExtension: "json"
+    ) else {
+      fatalError("Missing Bun PR #30412 demo fixture")
+    }
+
+    do {
+      let fixture = try JSONDecoder().decode(
+        Fixture.self,
+        from: Data(contentsOf: url)
+      )
+      guard fixture.files.count == fixture.changedFiles else {
+        fatalError(
+          "Bun PR #30412 fixture declares \(fixture.changedFiles) files "
+            + "but contains \(fixture.files.count)"
+        )
+      }
+      return fixture
+    } catch {
+      fatalError("Invalid Bun PR #30412 demo fixture: \(error.localizedDescription)")
     }
   }
 }
