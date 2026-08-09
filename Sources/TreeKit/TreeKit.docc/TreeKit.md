@@ -11,9 +11,9 @@ TreeKit separates immutable hierarchy preparation from long-lived UI state:
 2. Keep a ``FileTreeModel`` alive while the component is mounted.
 3. Render the model with SwiftUI ``FileTree`` or native ``FileTreeView``.
 
-The model owns identity-based selection, expansion, focus, the visible preorder projection, and
-reveal requests. Native controls own viewport reuse and platform interaction. Custom renderers
-receive ``FileTreeRowContext`` and supply only row content.
+The model owns identity-based selection, expansion, focus, search, the visible preorder
+projection, and reveal requests. Native controls own viewport reuse and platform interaction.
+Custom renderers receive ``FileTreeRowContext`` and supply only row content.
 
 ```swift
 let model = try FileTreeModel<FileTreePath>(
@@ -43,6 +43,7 @@ let model = try FileTreeModel<FileTreePath>(
 - ``FileTreeVisibleRow``
 - ``FileTreeRowContext``
 - ``FileTreeInitialExpansion``
+- ``FileTreeSearchMode``
 - ``FileTreeScrollPosition``
 
 ### Rendering

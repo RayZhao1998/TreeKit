@@ -23,21 +23,41 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// The visible projection in depth-first preorder.
     public private(set) var visibleRows: [FileTreeVisibleRow<Node>]
 
+    /// The normalized, path-style query for the current search session.
+    public private(set) var searchQuery: String
+
+    /// Matching identities in deterministic prepared-tree preorder.
+    public private(set) var matchingIDs: [Node.ID]
+
+    /// Whether the model currently owns an open search session.
+    public private(set) var isSearchOpen: Bool
+
+    /// The projection policy applied while search is open with a nonempty query.
+    public private(set) var searchMode: FileTreeSearchMode
+
     /// Advances once after each complete model transaction.
     @Published public private(set) var revision: UInt64 = 0
 
     internal var dataRevision: UInt64 = 0
     internal var expansionRevision: UInt64 = 0
+    internal var searchRevision: UInt64 = 0
     internal var revealRequest: FileTreeRevealRequest<Node.ID>?
+    internal private(set) var renderedExpandedIDs: Set<Node.ID>
 
     private var visibleIndexByID: [Node.ID: Int] = [:]
     private var revealSequence: UInt64 = 0
+    private var matchingIDSet: Set<Node.ID> = []
+    private var searchVisibleIDSet: Set<Node.ID>?
+    private var normalizedSearchTextByID: [Node.ID: String]?
+    private let searchText: (Node) -> String
 
     /// Creates a stable tree model from prepared data.
     public init(
         _ preparedTree: PreparedTree<Node>,
         initialExpansion: FileTreeInitialExpansion<Node.ID> = .collapsed,
-        initialSelection: Set<Node.ID> = []
+        initialSelection: Set<Node.ID> = [],
+        searchMode: FileTreeSearchMode = .hideNonMatches,
+        searchText: @escaping (Node) -> String = { String(describing: $0.id) }
     ) {
         let selection = initialSelection.filtering { preparedTree.contains($0) }
         let expandedIDs = Self.expandedIDs(for: initialExpansion, in: preparedTree)
@@ -46,6 +66,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         self.expandedIDs = expandedIDs
         self.focusedID = preparedTree.preorderIDs.first { selection.contains($0) }
         self.visibleRows = Self.makeVisibleRows(in: preparedTree, expandedIDs: expandedIDs)
+        self.searchQuery = ""
+        self.matchingIDs = []
+        self.isSearchOpen = false
+        self.searchMode = searchMode
+        self.renderedExpandedIDs = expandedIDs
+        self.searchText = searchText
         rebuildVisibleIndex()
     }
 
@@ -69,9 +95,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         self.expandedIDs = nextExpansion
         self.selection = nextSelection
         self.focusedID = focusedID.flatMap { preparedTree.contains($0) ? $0 : nil }
+        normalizedSearchTextByID = nil
+        refreshSearchMatches(selectingFallbackFocus: true)
         rebuildVisibleRows()
         dataRevision &+= 1
         expansionRevision &+= 1
+        searchRevision &+= 1
         publishChange()
     }
 
@@ -136,7 +165,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Expands one branch. Expanding a hidden descendant records state without forcing ancestors open.
     public func expand(_ id: Node.ID) {
         guard preparedTree.isExpandable(id), expandedIDs.insert(id).inserted else { return }
-        insertVisibleDescendants(of: id)
+        if hasActiveSearchQuery {
+            rebuildVisibleRows()
+        } else {
+            renderedExpandedIDs = expandedIDs
+            insertVisibleDescendants(of: id)
+        }
         expansionRevision &+= 1
         publishChange()
     }
@@ -144,7 +178,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Collapses one branch while retaining nested descendants' expansion state.
     public func collapse(_ id: Node.ID) {
         guard expandedIDs.remove(id) != nil else { return }
-        removeVisibleDescendants(of: id)
+        if hasActiveSearchQuery {
+            rebuildVisibleRows()
+        } else {
+            renderedExpandedIDs = expandedIDs
+            removeVisibleDescendants(of: id)
+        }
         expansionRevision &+= 1
         publishChange()
     }
@@ -180,6 +219,42 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         setExpandedIDs([])
     }
 
+    /// Opens search and optionally applies an initial query.
+    public func openSearch(initialQuery: String = "") {
+        applySearch(query: initialQuery, isOpen: true)
+    }
+
+    /// Closes search, clears its matches, and restores the canonical expansion projection.
+    public func closeSearch() {
+        guard isSearchOpen else { return }
+        applySearch(query: "", isOpen: false)
+    }
+
+    /// Opens search if needed and replaces its normalized query.
+    public func setSearchQuery(_ query: String) {
+        applySearch(query: query, isOpen: true)
+    }
+
+    /// Changes how active matches are projected without changing canonical expansion state.
+    public func setSearchMode(_ mode: FileTreeSearchMode) {
+        guard mode != searchMode else { return }
+        searchMode = mode
+        rebuildVisibleRows()
+        expansionRevision &+= 1
+        searchRevision &+= 1
+        publishChange()
+    }
+
+    /// Focuses the next matching visible row, clamping at the final match.
+    public func focusNextSearchMatch() {
+        focusSearchMatch(offset: 1)
+    }
+
+    /// Focuses the previous matching visible row, clamping at the first match.
+    public func focusPreviousSearchMatch() {
+        focusSearchMatch(offset: -1)
+    }
+
     /// Expands all ancestors, optionally selects the item, and asks the mounted view to scroll.
     public func reveal(
         _ id: Node.ID,
@@ -197,7 +272,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         }
         if let firstNewlyExpandedAncestor = newlyExpandedAncestors.first {
             expandedIDs.formUnion(newlyExpandedAncestors)
-            insertVisibleDescendants(of: firstNewlyExpandedAncestor)
+            if hasActiveSearchQuery {
+                rebuildVisibleRows()
+            } else {
+                renderedExpandedIDs = expandedIDs
+                insertVisibleDescendants(of: firstNewlyExpandedAncestor)
+            }
             expansionRevision &+= 1
         }
 
@@ -228,6 +308,29 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         return visibleRows[index]
     }
 
+    internal var renderedRootIDs: [Node.ID] {
+        guard let searchVisibleIDSet else { return preparedTree.rootIDs }
+        return preparedTree.rootIDs.filter(searchVisibleIDSet.contains)
+    }
+
+    internal func renderedChildIDs(of id: Node.ID) -> [Node.ID] {
+        let childIDs = preparedTree.childrenByID[id] ?? []
+        guard let searchVisibleIDSet else { return childIDs }
+        return childIDs.filter(searchVisibleIDSet.contains)
+    }
+
+    internal func isRenderedExpandable(_ id: Node.ID) -> Bool {
+        !renderedChildIDs(of: id).isEmpty
+    }
+
+    internal func isRenderedExpanded(_ id: Node.ID) -> Bool {
+        renderedExpandedIDs.contains(id)
+    }
+
+    internal func isSearchMatch(_ id: Node.ID) -> Bool {
+        matchingIDSet.contains(id)
+    }
+
     private static func expandedIDs(
         for initialExpansion: FileTreeInitialExpansion<Node.ID>,
         in tree: PreparedTree<Node>
@@ -249,33 +352,53 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     private static func makeVisibleRows(
         in tree: PreparedTree<Node>,
-        expandedIDs: Set<Node.ID>
+        expandedIDs: Set<Node.ID>,
+        visibleIDSet: Set<Node.ID>? = nil
     ) -> [FileTreeVisibleRow<Node>] {
-        makeVisibleRows(startingAt: tree.rootIDs, in: tree, expandedIDs: expandedIDs)
+        makeVisibleRows(
+            startingAt: tree.rootIDs,
+            in: tree,
+            expandedIDs: expandedIDs,
+            visibleIDSet: visibleIDSet
+        )
     }
 
     private static func makeVisibleRows(
         startingAt startIDs: [Node.ID],
         in tree: PreparedTree<Node>,
-        expandedIDs: Set<Node.ID>
+        expandedIDs: Set<Node.ID>,
+        visibleIDSet: Set<Node.ID>? = nil
     ) -> [FileTreeVisibleRow<Node>] {
         var result: [FileTreeVisibleRow<Node>] = []
-        var stack = Array(startIDs.reversed())
+        let visibleStartIDs = visibleIDSet.map { visibleIDs in
+            startIDs.filter(visibleIDs.contains)
+        } ?? startIDs
+        var stack = visibleStartIDs.enumerated().reversed().map { index, id in
+            (id: id, siblingIndex: index, siblingCount: visibleStartIDs.count)
+        }
 
-        while let id = stack.popLast() {
+        while let pending = stack.popLast() {
+            let id = pending.id
             guard let node = tree.nodesByID[id] else { continue }
             result.append(
                 FileTreeVisibleRow(
                     node: node,
                     depth: tree.depthByID[id] ?? 0,
                     parentID: tree.parentByID[id],
-                    siblingIndex: tree.siblingIndexByID[id] ?? 0,
-                    siblingCount: tree.siblingCount(of: id)
+                    siblingIndex: pending.siblingIndex,
+                    siblingCount: pending.siblingCount
                 )
             )
 
             if expandedIDs.contains(id) {
-                stack.append(contentsOf: (tree.childrenByID[id] ?? []).reversed())
+                let childIDs = visibleIDSet.map { visibleIDs in
+                    (tree.childrenByID[id] ?? []).filter(visibleIDs.contains)
+                } ?? (tree.childrenByID[id] ?? [])
+                stack.append(
+                    contentsOf: childIDs.enumerated().reversed().map { index, childID in
+                        (id: childID, siblingIndex: index, siblingCount: childIDs.count)
+                    }
+                )
             }
         }
 
@@ -283,7 +406,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     private func rebuildVisibleRows() {
-        visibleRows = Self.makeVisibleRows(in: preparedTree, expandedIDs: expandedIDs)
+        rebuildSearchProjectionState()
+        visibleRows = Self.makeVisibleRows(
+            in: preparedTree,
+            expandedIDs: renderedExpandedIDs,
+            visibleIDSet: searchVisibleIDSet
+        )
         rebuildVisibleIndex()
     }
 
@@ -317,6 +445,120 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         for (index, row) in visibleRows.enumerated() {
             visibleIndexByID[row.id] = index
         }
+    }
+
+    private var hasActiveSearchQuery: Bool {
+        isSearchOpen && !searchQuery.isEmpty
+    }
+
+    private func applySearch(query: String, isOpen: Bool) {
+        let normalizedQuery = isOpen ? Self.normalizeSearchQuery(query) : ""
+        guard self.isSearchOpen != isOpen || searchQuery != normalizedQuery else { return }
+
+        self.isSearchOpen = isOpen
+        searchQuery = normalizedQuery
+        refreshSearchMatches(selectingFallbackFocus: true)
+        rebuildVisibleRows()
+        expansionRevision &+= 1
+        searchRevision &+= 1
+        publishChange()
+    }
+
+    private func refreshSearchMatches(selectingFallbackFocus: Bool) {
+        guard hasActiveSearchQuery else {
+            matchingIDs = []
+            matchingIDSet = []
+            return
+        }
+
+        let searchTextByID: [Node.ID: String]
+        if let normalizedSearchTextByID {
+            searchTextByID = normalizedSearchTextByID
+        } else {
+            var generated: [Node.ID: String] = [:]
+            generated.reserveCapacity(preparedTree.count)
+            for id in preparedTree.preorderIDs {
+                guard let node = preparedTree.nodesByID[id] else { continue }
+                generated[id] = Self.normalizeSearchQuery(searchText(node))
+            }
+            normalizedSearchTextByID = generated
+            searchTextByID = generated
+        }
+
+        matchingIDs = preparedTree.preorderIDs.filter { id in
+            searchTextByID[id]?.contains(searchQuery) == true
+        }
+        matchingIDSet = Set(matchingIDs)
+
+        if selectingFallbackFocus,
+           !matchingIDs.isEmpty,
+           focusedID.map(matchingIDSet.contains) != true {
+            focusedID = matchingIDs[0]
+        }
+    }
+
+    private func rebuildSearchProjectionState() {
+        guard hasActiveSearchQuery else {
+            renderedExpandedIDs = expandedIDs
+            searchVisibleIDSet = nil
+            return
+        }
+
+        var requiredExpandedIDs: Set<Node.ID> = []
+        var contextualVisibleIDs = matchingIDSet
+        for matchingID in matchingIDs {
+            if preparedTree.isExpandable(matchingID) {
+                requiredExpandedIDs.insert(matchingID)
+            }
+            for ancestorID in preparedTree.ancestorIDs(of: matchingID) {
+                contextualVisibleIDs.insert(ancestorID)
+                if preparedTree.isExpandable(ancestorID) {
+                    requiredExpandedIDs.insert(ancestorID)
+                }
+            }
+        }
+
+        switch searchMode {
+        case .expandMatches:
+            renderedExpandedIDs = expandedIDs.union(requiredExpandedIDs)
+            searchVisibleIDSet = nil
+        case .collapseNonMatches:
+            renderedExpandedIDs = requiredExpandedIDs
+            searchVisibleIDSet = nil
+        case .hideNonMatches:
+            renderedExpandedIDs = requiredExpandedIDs
+            searchVisibleIDSet = contextualVisibleIDs
+        }
+    }
+
+    private func focusSearchMatch(offset: Int) {
+        guard !matchingIDs.isEmpty else { return }
+        let currentIndex = focusedID.flatMap { matchingIDs.firstIndex(of: $0) }
+        let nextIndex: Int
+        if let currentIndex {
+            nextIndex = min(matchingIDs.count - 1, max(0, currentIndex + offset))
+        } else {
+            nextIndex = offset > 0 ? 0 : matchingIDs.count - 1
+        }
+
+        let nextID = matchingIDs[nextIndex]
+        guard focusedID != nextID else { return }
+        focusedID = nextID
+        revealSequence &+= 1
+        revealRequest = FileTreeRevealRequest(
+            sequence: revealSequence,
+            id: nextID,
+            position: .nearest,
+            focus: true
+        )
+        publishChange()
+    }
+
+    private static func normalizeSearchQuery(_ query: String) -> String {
+        query
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\", with: "/")
+            .lowercased()
     }
 
     internal func synchronizeSelection(_ identifiers: Set<Node.ID>, focusedID: Node.ID?) {

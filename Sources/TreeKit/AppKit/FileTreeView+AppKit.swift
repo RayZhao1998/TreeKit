@@ -235,6 +235,7 @@ private extension FileTreeView {
         private var boxesByID: [Node.ID: ItemBox] = [:]
         private var appliedDataRevision: UInt64?
         private var appliedExpansionRevision: UInt64?
+        private var appliedSearchRevision: UInt64?
         private var requestedExpandedIDs: Set<Node.ID> = []
         private var appliedExpandedIDs: Set<Node.ID> = []
         private var knownNativeExpandedIDs: Set<Node.ID> = []
@@ -252,6 +253,7 @@ private extension FileTreeView {
             boxesByID = [:]
             appliedDataRevision = nil
             appliedExpansionRevision = nil
+            appliedSearchRevision = nil
             requestedExpandedIDs = []
             appliedExpandedIDs = []
             knownNativeExpandedIDs = []
@@ -269,6 +271,7 @@ private extension FileTreeView {
             defer { isApplyingModelState = false }
 
             var dataChanged = false
+            var searchChanged = false
             if appliedDataRevision != owner.model.dataRevision {
                 boxesByID.removeAll(keepingCapacity: true)
                 boxesByID.reserveCapacity(owner.model.preparedTree.count)
@@ -277,6 +280,7 @@ private extension FileTreeView {
                 }
                 outlineView.reloadData()
                 appliedDataRevision = owner.model.dataRevision
+                appliedSearchRevision = owner.model.searchRevision
                 appliedExpansionRevision = nil
                 requestedExpandedIDs = []
                 appliedExpandedIDs = []
@@ -285,13 +289,24 @@ private extension FileTreeView {
                 appliedSelection = []
                 appliedFocusedID = nil
                 dataChanged = true
+            } else if appliedSearchRevision != owner.model.searchRevision {
+                outlineView.reloadData()
+                appliedSearchRevision = owner.model.searchRevision
+                appliedExpansionRevision = nil
+                requestedExpandedIDs = []
+                appliedExpandedIDs = []
+                knownNativeExpandedIDs = []
+                pendingCollapseIDs = []
+                searchChanged = true
             }
 
             var expansionChangedIDs: Set<Node.ID> = []
             if appliedExpansionRevision != owner.model.expansionRevision {
-                expansionChangedIDs = requestedExpandedIDs.symmetricDifference(owner.model.expandedIDs)
+                expansionChangedIDs = requestedExpandedIDs.symmetricDifference(
+                    owner.model.renderedExpandedIDs
+                )
                 applyExpansion(to: outlineView)
-                requestedExpandedIDs = owner.model.expandedIDs
+                requestedExpandedIDs = owner.model.renderedExpandedIDs
                 appliedExpansionRevision = owner.model.expansionRevision
             }
 
@@ -302,7 +317,7 @@ private extension FileTreeView {
             let rowIDsToReload = expansionChangedIDs
                 .union(selectionChangedIDs)
                 .union(focusChangedIDs)
-            if forceRowReload || dataChanged {
+            if forceRowReload || dataChanged || searchChanged {
                 reloadMountedRows()
             } else if !rowIDsToReload.isEmpty {
                 reloadRows(withIDs: rowIDsToReload)
@@ -355,7 +370,7 @@ private extension FileTreeView {
 
         func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
             guard let owner, let box = item as? ItemBox else { return false }
-            return owner.model.preparedTree.isExpandable(box.id)
+            return owner.model.isRenderedExpandable(box.id)
         }
 
         func outlineView(
@@ -423,7 +438,7 @@ private extension FileTreeView {
             else { return }
 
             if owner.configuration.expandsBranchesOnDoubleClick,
-               owner.model.preparedTree.isExpandable(box.id) {
+               owner.model.isRenderedExpandable(box.id) {
                 owner.model.toggleExpansion(of: box.id)
             } else {
                 owner.onActivate?(node)
@@ -433,9 +448,9 @@ private extension FileTreeView {
         private func IDs(for item: Any?) -> [Node.ID] {
             guard let owner else { return [] }
             if let box = item as? ItemBox {
-                return owner.model.preparedTree.childrenByID[box.id] ?? []
+                return owner.model.renderedChildIDs(of: box.id)
             }
-            return owner.model.preparedTree.rootIDs
+            return owner.model.renderedRootIDs
         }
 
         private func rowContext(
@@ -446,24 +461,26 @@ private extension FileTreeView {
                 preconditionFailure("A mounted tree coordinator must have an owner")
             }
             let tree = owner.model.preparedTree
+            let projectedRow = owner.model.visibleRow(for: id)
             let visibleIndex = boxesByID[id].map { outlineView.row(forItem: $0) } ?? -1
             return FileTreeRowContext(
                 id: id,
                 visibleIndex: visibleIndex,
-                depth: tree.depthByID[id] ?? 0,
-                parentID: tree.parentByID[id],
-                siblingIndex: tree.siblingIndexByID[id] ?? 0,
-                siblingCount: tree.siblingCount(of: id),
-                isExpandable: tree.isExpandable(id),
-                isExpanded: owner.model.expandedIDs.contains(id),
+                depth: projectedRow?.depth ?? tree.depthByID[id] ?? 0,
+                parentID: projectedRow?.parentID ?? tree.parentByID[id],
+                siblingIndex: projectedRow?.siblingIndex ?? tree.siblingIndexByID[id] ?? 0,
+                siblingCount: projectedRow?.siblingCount ?? tree.siblingCount(of: id),
+                isExpandable: owner.model.isRenderedExpandable(id),
+                isExpanded: owner.model.isRenderedExpanded(id),
                 isSelected: owner.model.selection.contains(id),
-                isFocused: owner.model.focusedID == id
+                isFocused: owner.model.focusedID == id,
+                isSearchMatch: owner.model.isSearchMatch(id)
             )
         }
 
         private func applyExpansion(to outlineView: NSOutlineView) {
             guard let owner else { return }
-            let target = owner.model.expandedIDs
+            let target = owner.model.renderedExpandedIDs
             pendingCollapseIDs.subtract(target)
 
             let collapsing = knownNativeExpandedIDs.subtracting(target)

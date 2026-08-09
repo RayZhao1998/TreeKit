@@ -187,6 +187,8 @@ struct ContentView: View {
       .padding(.horizontal, 14)
       .padding(.vertical, 11)
 
+      TreeSearchBar(model: model)
+
       Divider()
 
       treeSurface
@@ -223,6 +225,91 @@ struct ContentView: View {
 }
 
 @MainActor
+private struct TreeSearchBar: View {
+  @ObservedObject var model: FileTreeModel<FileTreePath>
+  @State private var query = ""
+  @FocusState private var isFocused: Bool
+
+  var body: some View {
+    HStack(spacing: 8) {
+      Image(systemName: "magnifyingglass")
+        .foregroundStyle(.secondary)
+
+      TextField("Search canonical paths", text: $query)
+        .textFieldStyle(.plain)
+        .focused($isFocused)
+        .onChange(of: isFocused) { focused in
+          if focused, !model.isSearchOpen {
+            model.openSearch(initialQuery: query)
+          }
+        }
+        .onChange(of: query) { value in
+          guard model.isSearchOpen || !value.isEmpty else { return }
+          model.setSearchQuery(value)
+        }
+        .onSubmit {
+          model.focusNextSearchMatch()
+        }
+
+      if model.isSearchOpen {
+        Text(model.matchingIDs.count.formatted())
+          .font(.system(.caption, design: .monospaced))
+          .foregroundStyle(model.matchingIDs.isEmpty ? .secondary : .primary)
+          .accessibilityLabel("\(model.matchingIDs.count) matches")
+
+        Button {
+          model.focusPreviousSearchMatch()
+        } label: {
+          Image(systemName: "chevron.up")
+        }
+        .buttonStyle(.borderless)
+        .disabled(model.matchingIDs.isEmpty)
+        .help("Previous match")
+
+        Button {
+          model.focusNextSearchMatch()
+        } label: {
+          Image(systemName: "chevron.down")
+        }
+        .buttonStyle(.borderless)
+        .disabled(model.matchingIDs.isEmpty)
+        .help("Next match")
+
+        Button {
+          query = ""
+          model.closeSearch()
+          isFocused = false
+        } label: {
+          Image(systemName: "xmark.circle.fill")
+        }
+        .buttonStyle(.borderless)
+        .foregroundStyle(.secondary)
+        .help("Close search")
+      }
+
+      Picker(
+        "Search projection",
+        selection: Binding(
+          get: { model.searchMode },
+          set: { model.setSearchMode($0) }
+        )
+      ) {
+        ForEach(FileTreeSearchMode.allCases, id: \.self) { mode in
+          Text(mode.demoTitle).tag(mode)
+        }
+      }
+      .labelsHidden()
+      .pickerStyle(.menu)
+      .frame(width: 112)
+    }
+    .controlSize(.small)
+    .padding(.horizontal, 12)
+    .frame(height: 34)
+    .background(.quaternary.opacity(0.35))
+  }
+}
+
+@MainActor
 private struct TreeStatusBar: View {
   @ObservedObject var model: FileTreeModel<FileTreePath>
 
@@ -232,6 +319,11 @@ private struct TreeStatusBar: View {
         .fill(.green)
         .frame(width: 7, height: 7)
       Text("\(model.visibleRows.count) visible")
+      if model.isSearchOpen {
+        Text("·")
+          .foregroundStyle(.tertiary)
+        Text("\(model.matchingIDs.count) matches")
+      }
       Text("·")
         .foregroundStyle(.tertiary)
       Text("\(DemoData.changedFileCount.formatted()) changed files")
@@ -246,5 +338,15 @@ private struct TreeStatusBar: View {
     .foregroundStyle(.secondary)
     .padding(.horizontal, 12)
     .frame(height: 30)
+  }
+}
+
+private extension FileTreeSearchMode {
+  var demoTitle: String {
+    switch self {
+    case .expandMatches: "Expand"
+    case .collapseNonMatches: "Collapse"
+    case .hideNonMatches: "Filter"
+    }
   }
 }

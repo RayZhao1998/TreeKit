@@ -56,6 +56,171 @@ struct PreparedTreeTests {
 
 @MainActor
 struct FileTreeModelTests {
+    private func makeSearchTree() throws -> PreparedTree<TestNode> {
+        try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "Sources/",
+                    children: [
+                        TestNode(id: "Sources/App.swift"),
+                        TestNode(
+                            id: "Sources/Support/",
+                            children: [TestNode(id: "Sources/Support/Logger.swift")]
+                        )
+                    ]
+                ),
+                TestNode(
+                    id: "Tests/",
+                    children: [TestNode(id: "Tests/AppTests.swift")]
+                ),
+                TestNode(id: "README.md")
+            ],
+            children: \.children
+        )
+    }
+
+    @Test
+    func searchFiltersMatchesWithAncestorContextWithoutMutatingIdentityState() throws {
+        let model = FileTreeModel(
+            try makeSearchTree(),
+            initialExpansion: .identifiers(["Sources/"]),
+            initialSelection: ["README.md"]
+        )
+
+        model.openSearch(initialQuery: " APP ")
+
+        #expect(model.isSearchOpen)
+        #expect(model.searchQuery == "app")
+        #expect(model.matchingIDs == ["Sources/App.swift", "Tests/AppTests.swift"])
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["Sources/", "Sources/App.swift", "Tests/", "Tests/AppTests.swift"]
+        )
+        #expect(model.selection == ["README.md"])
+        #expect(model.expandedIDs == ["Sources/"])
+        #expect(model.focusedID == "Sources/App.swift")
+
+        let stableSearchRevision = model.revision
+        model.setSearchQuery("app")
+        #expect(model.revision == stableSearchRevision)
+
+        model.closeSearch()
+
+        #expect(!model.isSearchOpen)
+        #expect(model.searchQuery.isEmpty)
+        #expect(model.matchingIDs.isEmpty)
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "Sources/",
+                    "Sources/App.swift",
+                    "Sources/Support/",
+                    "Tests/",
+                    "README.md"
+                ]
+        )
+        #expect(model.selection == ["README.md"])
+        #expect(model.expandedIDs == ["Sources/"])
+        #expect(model.focusedID == "Sources/App.swift")
+    }
+
+    @Test
+    func searchProjectionModesHaveDocumentedDeterministicShapes() throws {
+        let model = FileTreeModel(
+            try makeSearchTree(),
+            initialExpansion: .identifiers(["Tests/"])
+        )
+
+        model.setSearchMode(.expandMatches)
+        model.openSearch(initialQuery: "logger")
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "Sources/",
+                    "Sources/App.swift",
+                    "Sources/Support/",
+                    "Sources/Support/Logger.swift",
+                    "Tests/",
+                    "Tests/AppTests.swift",
+                    "README.md"
+                ]
+        )
+
+        model.setSearchMode(.collapseNonMatches)
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "Sources/",
+                    "Sources/App.swift",
+                    "Sources/Support/",
+                    "Sources/Support/Logger.swift",
+                    "Tests/",
+                    "README.md"
+                ]
+        )
+
+        model.setSearchMode(.hideNonMatches)
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["Sources/", "Sources/Support/", "Sources/Support/Logger.swift"]
+        )
+        #expect(model.expandedIDs == ["Tests/"])
+    }
+
+    @Test
+    func searchMatchNavigationClampsInVisiblePreorder() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(id: "A.swift"),
+                TestNode(id: "B.swift"),
+                TestNode(id: "C.txt"),
+                TestNode(id: "D.swift")
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(tree, initialSelection: ["C.txt"])
+
+        model.openSearch(initialQuery: "swift")
+        #expect(model.focusedID == "A.swift")
+
+        model.focusNextSearchMatch()
+        #expect(model.focusedID == "B.swift")
+        model.focusNextSearchMatch()
+        #expect(model.focusedID == "D.swift")
+        model.focusNextSearchMatch()
+        #expect(model.focusedID == "D.swift")
+        model.focusPreviousSearchMatch()
+        #expect(model.focusedID == "B.swift")
+        #expect(model.selection == ["C.txt"])
+    }
+
+    @Test
+    func clearingSearchRestoresProjectionAndEmptyResultsRemainEmpty() throws {
+        let model = FileTreeModel(
+            try makeSearchTree(),
+            initialExpansion: .identifiers(["Sources/"])
+        )
+
+        model.openSearch(initialQuery: "does-not-exist")
+        #expect(model.isSearchOpen)
+        #expect(model.matchingIDs.isEmpty)
+        #expect(model.visibleRows.isEmpty)
+
+        model.setSearchQuery("  ")
+        #expect(model.isSearchOpen)
+        #expect(model.searchQuery.isEmpty)
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "Sources/",
+                    "Sources/App.swift",
+                    "Sources/Support/",
+                    "Tests/",
+                    "README.md"
+                ]
+        )
+    }
+
     @Test
     func expansionUpdatesOnlyTheAffectedVisibleProjection() throws {
         let input = TestNode(

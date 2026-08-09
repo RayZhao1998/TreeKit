@@ -71,6 +71,33 @@ struct RenderingAPITests {
         _ = view
     }
 
+    @Test
+    func appKitRendersTheSharedSearchProjection() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Folder/Target.swift",
+                "Root/Other.swift",
+                "Outside.swift"
+            ],
+            options: .init(sort: .inputOrder)
+        )
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+
+        #expect(outlineView.numberOfRows == 2)
+
+        model.openSearch(initialQuery: "target")
+        #expect(model.visibleRows.map(\.id) == ["Root/", "Root/Folder/", "Root/Folder/Target.swift"])
+        #expect(outlineView.numberOfRows == 3)
+
+        model.setSearchQuery("missing")
+        #expect(model.visibleRows.isEmpty)
+        #expect(outlineView.numberOfRows == 0)
+
+        model.closeSearch()
+        #expect(outlineView.numberOfRows == 2)
+    }
+
     private func findOutlineView(in view: NSView) -> NSOutlineView? {
         if let outlineView = view as? NSOutlineView {
             return outlineView

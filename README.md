@@ -183,6 +183,47 @@ model.reset(nextPreparedTree)
 Selection and expansion survive `reset` for retained identities by default. Removed identities
 are pruned atomically before the mounted renderer observes the new data.
 
+## Model-backed search
+
+Search is shared `FileTreeModel` state, so SwiftUI, AppKit, and UIKit always render the same
+projection. Queries are trimmed, normalized to `/` separators, and matched case-insensitively
+against canonical paths for `FileTreePath` models:
+
+```swift
+model.openSearch(initialQuery: "sources\\treekit")
+
+model.searchQuery       // "sources/treekit"
+model.matchingIDs       // stable IDs in prepared preorder
+model.isSearchOpen      // true
+
+model.focusNextSearchMatch()
+model.focusPreviousSearchMatch()
+model.setSearchQuery("filetreeview")
+model.closeSearch()
+```
+
+`FileTreeSearchMode` controls only the effective visible projection. Canonical selection and
+expansion remain identity-based and are not rewritten when a query changes:
+
+- `.expandMatches` preserves current expansion and additionally expands every match path.
+- `.collapseNonMatches` starts from a collapsed projection and expands match paths, retaining
+  nonmatching siblings as context.
+- `.hideNonMatches`—the default—shows only matches and the ancestors required to preserve their
+  hierarchy.
+
+An open search with an empty query renders the normal expansion projection. In
+`.hideNonMatches`, a nonempty query with no matches renders an empty tree. Custom rows can use
+`context.isSearchMatch` for highlighting without recomputing the match.
+
+For arbitrary node types, provide the searchable text once when the model is created:
+
+```swift
+let model = FileTreeModel(
+    prepared,
+    searchText: { $0.title }
+)
+```
+
 ## Performance contract
 
 - `PreparedTree` indexes nodes, parents, ordered children, depth, and siblings in O(n) time and
@@ -196,6 +237,8 @@ are pruned atomically before the mounted renderer observes the new data.
 - AppKit and UIKit render only native mounted cells. SwiftUI custom content is hosted inside
   those reused cells rather than recursively constructing the entire tree.
 - Row height is fixed by `FileTreeConfiguration`, avoiding whole-tree measurement during scroll.
+- Search caches normalized node text once, preserves deterministic prepared preorder, and rebuilds
+  only the shared visible projection when its query or mode changes.
 
 The package intentionally does not enumerate the filesystem, watch directories, or persist
 state. The current 1.x model renders an already known hierarchy and can replace it through

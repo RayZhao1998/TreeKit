@@ -194,12 +194,15 @@ public extension FileTreeModel where Node == FileTreePath {
         paths: [String],
         options: FileTreePathOptions = .init(),
         initialExpansion: FileTreeInitialExpansion<String> = .collapsed,
-        initialSelection: Set<String> = []
+        initialSelection: Set<String> = [],
+        searchMode: FileTreeSearchMode = .hideNonMatches
     ) throws {
         try self.init(
             prepareFileTree(paths: paths, options: options),
             initialExpansion: initialExpansion,
-            initialSelection: initialSelection
+            initialSelection: initialSelection,
+            searchMode: searchMode,
+            searchText: \.path
         )
     }
 }
