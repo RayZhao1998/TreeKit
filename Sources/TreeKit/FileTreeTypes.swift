@@ -44,8 +44,8 @@ extension FileTreeInitialExpansion: Sendable where ID: Sendable {}
 /// Controls how an active, nonempty search query changes the visible projection.
 ///
 /// Search never mutates the model's canonical selection or expansion sets. These modes only
-/// determine the effective expansion and filtering presented by ``visibleRows`` and the native
-/// renderers until the query is cleared or search is closed.
+/// determine the effective expansion and filtering presented by ``FileTreeModel/visibleRows``
+/// and the native renderers until the query is cleared or search is closed.
 public enum FileTreeSearchMode: CaseIterable, Equatable, Hashable, Sendable {
     /// Preserves canonical expansion and additionally expands every matching branch and ancestor.
     case expandMatches

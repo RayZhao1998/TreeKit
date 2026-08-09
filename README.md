@@ -183,6 +183,41 @@ model.reset(nextPreparedTree)
 Selection and expansion survive `reset` for retained identities by default. Removed identities
 are pruned atomically before the mounted renderer observes the new data.
 
+## Incremental path mutations
+
+`FileTreeModel<FileTreePath>` also exposes the path-first mutation vocabulary used by
+`@pierre/trees`. Every successful call installs a complete model transaction before emitting its
+typed semantic event:
+
+```swift
+let mutationSubscription = model.onMutation { event in
+    persist(event) // Retain this cancellable with the surrounding controller.
+}
+
+try model.add("Sources/TreeKit/NewRow.swift")
+try model.remove("Tests/ObsoleteTests.swift")
+try model.move("Sources/Old/", to: "Sources/New/")
+
+try model.batch([
+    .add(path: "Sources/Feature.swift"),
+    .move(from: "README.md", to: "Docs/README.md"),
+    .remove(path: "Legacy/")
+])
+
+try model.resetPaths(nextPaths)
+```
+
+`add`, `remove`, `move`, `batch`, and `resetPaths` normalize and validate paths before changing
+the mounted tree. A batch is ordered and atomic: if any operation fails, the model publishes no
+revision or mutation event. Moving a directory remaps valid selection, expansion, and focus IDs;
+removals prune identities inside the removed subtree. The destination parent of a move must
+already be a directory, and directory destinations retain the trailing `/` convention.
+
+Subscribe through `mutationEvents`, or use `onMutation(_:handler:)` to filter by
+`FileTreePathMutationEvent.Kind`. These events report in-memory intent for persistence, logging,
+or adjacent UI. TreeKit never creates, deletes, or moves filesystem entries; the caller owns that
+side effect and any rollback policy.
+
 ## Model-backed search
 
 Search is shared `FileTreeModel` state, so SwiftUI, AppKit, and UIKit always render the same
@@ -239,10 +274,13 @@ let model = FileTreeModel(
 - Row height is fixed by `FileTreeConfiguration`, avoiding whole-tree measurement during scroll.
 - Search caches normalized node text once, preserves deterministic prepared preorder, and rebuilds
   only the shared visible projection when its query or mode changes.
+- Path mutations stage validation away from mounted state, then install one prepared hierarchy and
+  visible projection. Batches may validate ordered intermediate hierarchies, but publish only the
+  final projection and one semantic event.
 
 The package intentionally does not enumerate the filesystem, watch directories, or persist
-state. The current 1.x model renders an already known hierarchy and can replace it through
-`reset`. A compatible lazy-child design for much larger trees is described in
+state. The current 1.x model renders an already known hierarchy and can update it through
+path-first mutations or complete reset. A compatible lazy-child design for much larger trees is described in
 [`Docs/LazyLoading.md`](Docs/LazyLoading.md); it is a roadmap, not a currently shipped API.
 
 ## Design references

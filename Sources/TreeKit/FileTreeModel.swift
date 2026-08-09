@@ -50,6 +50,11 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     private var searchVisibleIDSet: Set<Node.ID>?
     private var normalizedSearchTextByID: [Node.ID: String]?
     private let searchText: (Node) -> String
+    internal var fileTreePathMutationState: FileTreePathMutationState? = nil
+    internal var fileTreePathMutationSubject: PassthroughSubject<
+        FileTreePathMutationEvent,
+        Never
+    >? = nil
 
     /// Creates a stable tree model from prepared data.
     public init(
@@ -80,21 +85,47 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Retained identities preserve selection and expansion by default. Removed identities are
     /// pruned before AppKit receives the new snapshot.
     public func reset(
-        _ preparedTree: PreparedTree<Node>,
+        _ nextPreparedTree: PreparedTree<Node>,
         preservingExpansion: Bool = true,
         preservingSelection: Bool = true
     ) {
         let nextExpansion = preservingExpansion
-            ? expandedIDs.filtering { preparedTree.contains($0) && preparedTree.isExpandable($0) }
+            ? expandedIDs.filtering {
+                nextPreparedTree.contains($0) && nextPreparedTree.isExpandable($0)
+            }
             : []
         let nextSelection = preservingSelection
-            ? selection.filtering { preparedTree.contains($0) }
+            ? selection.filtering { nextPreparedTree.contains($0) }
             : []
+        let nextFocus = focusedID.flatMap { nextPreparedTree.contains($0) ? $0 : nil }
 
-        self.preparedTree = preparedTree
-        self.expandedIDs = nextExpansion
-        self.selection = nextSelection
-        self.focusedID = focusedID.flatMap { preparedTree.contains($0) ? $0 : nil }
+        // A generic prepared tree cannot distinguish caller-supplied directories from synthesized
+        // ancestors. Treat every prepared FileTreePath node as explicit if callers later use the
+        // path-first mutation interface. `resetPaths` retains the more precise source-path state.
+        if let fileTree = nextPreparedTree as? PreparedTree<FileTreePath> {
+            fileTreePathMutationState = FileTreePathMutationState(preparedTree: fileTree)
+        }
+
+        replacePreparedTree(
+            nextPreparedTree,
+            expandedIDs: nextExpansion,
+            selection: nextSelection,
+            focusedID: nextFocus
+        )
+    }
+
+    internal func replacePreparedTree(
+        _ nextPreparedTree: PreparedTree<Node>,
+        expandedIDs nextExpansion: Set<Node.ID>,
+        selection nextSelection: Set<Node.ID>,
+        focusedID nextFocus: Node.ID?
+    ) {
+        preparedTree = nextPreparedTree
+        expandedIDs = nextExpansion.filtering {
+            nextPreparedTree.contains($0) && nextPreparedTree.isExpandable($0)
+        }
+        selection = nextSelection.filtering { nextPreparedTree.contains($0) }
+        focusedID = nextFocus.flatMap { nextPreparedTree.contains($0) ? $0 : nil }
         normalizedSearchTextByID = nil
         refreshSearchMatches(selectingFallbackFocus: true)
         rebuildVisibleRows()
@@ -102,6 +133,18 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         expansionRevision &+= 1
         searchRevision &+= 1
         publishChange()
+    }
+
+    internal func pathMutationSubject() -> PassthroughSubject<
+        FileTreePathMutationEvent,
+        Never
+    > {
+        if let fileTreePathMutationSubject {
+            return fileTreePathMutationSubject
+        }
+        let subject = PassthroughSubject<FileTreePathMutationEvent, Never>()
+        fileTreePathMutationSubject = subject
+        return subject
     }
 
     /// Replaces selection with known identifiers from the current hierarchy.
