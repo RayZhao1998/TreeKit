@@ -59,6 +59,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
     private var observedModelIdentifier: ObjectIdentifier?
     private var observedDataRevision: UInt64?
     private var observedExpansionRevision: UInt64?
+    private var observedSearchRevision: UInt64?
     private var visibleIndexByID: [Node.ID: Int] = [:]
     private var lastRevealSequence: UInt64?
 
@@ -230,11 +231,13 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         let structureChanged = observedModelIdentifier != modelIdentifier
             || observedDataRevision != model.dataRevision
             || observedExpansionRevision != model.expansionRevision
+            || observedSearchRevision != model.searchRevision
 
         if structureChanged {
             observedModelIdentifier = modelIdentifier
             observedDataRevision = model.dataRevision
             observedExpansionRevision = model.expansionRevision
+            observedSearchRevision = model.searchRevision
             rebuildVisibleIndex()
             collectionView.reloadData()
         }
@@ -396,10 +399,11 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             parentID: row.parentID,
             siblingIndex: row.siblingIndex,
             siblingCount: row.siblingCount,
-            isExpandable: model.preparedTree.isExpandable(row.id),
-            isExpanded: model.expandedIDs.contains(row.id),
+            isExpandable: model.isRenderedExpandable(row.id),
+            isExpanded: model.isRenderedExpanded(row.id),
             isSelected: model.selection.contains(row.id),
-            isFocused: model.focusedID == row.id
+            isFocused: model.focusedID == row.id,
+            isSearchMatch: model.isSearchMatch(row.id)
         )
     }
 

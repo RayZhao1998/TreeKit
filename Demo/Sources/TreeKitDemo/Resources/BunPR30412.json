@@ -1,0 +1,8761 @@
+{
+  "repository": "oven-sh/bun",
+  "pullRequest": 30412,
+  "title": "Rewrite Bun in Rust",
+  "sourceURL": "https://diffshub.com/oven-sh/bun/pull/30412",
+  "changedFiles": 2188,
+  "files": [
+    {
+      "path": ".apply-lock",
+      "status": "A"
+    },
+    {
+      "path": ".apply-lock-guard.sh",
+      "status": "A"
+    },
+    {
+      "path": ".buildkite/ci.mjs",
+      "status": "M"
+    },
+    {
+      "path": ".cargo/.gitkeep",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/lifetime-classify.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-a-port.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b0-cyclebreak.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b0-movein.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b0-moveout.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b0-verify.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b1-tier.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b2-cycle.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b2-fill-blocked.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b2-fill.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b2-fix-bugs.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b2-keystone.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b2-ungate-tier.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-b2-verify.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-c-panic-swarm.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-blocked-on-resolve.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-build-queue.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-bundler-perfile.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-bundler-shard.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-crate-shard.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-recursive-ungate.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-subtree-batch.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-todo-sweep.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-d-unsafe-audit.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-e-body-port.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-e-mass-ungate.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-e-proper-port.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-e-scopeguard-sweep.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-e-test-bringup.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-f-accessor-sweep.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-f-probe-swarm.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-f-reviewed-refactor.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-f-test-swarm.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-g-mega-swarm.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-g-test-swarm-isolated.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-g-test-swarm-v3.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-g-test-swarm.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-ci-tasks.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-classify-issues.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-dedup.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-deep-dive.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-diff-review.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-idioms-audit.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-libuv-audit.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-main-parity.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-portnotes-survey.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-unsafe-wrap.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-windows-bughunt-wt.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-windows-bughunt.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-windows-errors.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-windows-singlefix.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/phase-h-windows-testfix.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".claude/workflows/porting-md-zigleakage.workflow.js",
+      "status": "A"
+    },
+    {
+      "path": ".github/workflows/format.yml",
+      "status": "M"
+    },
+    {
+      "path": ".gitignore",
+      "status": "M"
+    },
+    {
+      "path": ".prettierignore",
+      "status": "M"
+    },
+    {
+      "path": "CLAUDE.md",
+      "status": "M"
+    },
+    {
+      "path": "Cargo.lock",
+      "status": "A"
+    },
+    {
+      "path": "Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "bench/bundle/bun.lockb",
+      "status": "M"
+    },
+    {
+      "path": "bench/bundle/index.ts",
+      "status": "M"
+    },
+    {
+      "path": "bench/bundle/package.json",
+      "status": "M"
+    },
+    {
+      "path": "bench/snippets/http-hello.js",
+      "status": "M"
+    },
+    {
+      "path": "build.zig",
+      "status": "D"
+    },
+    {
+      "path": "package.json",
+      "status": "M"
+    },
+    {
+      "path": "packages/bun-types/bun.d.ts",
+      "status": "M"
+    },
+    {
+      "path": "packages/bun-usockets/src/crypto/openssl.c",
+      "status": "M"
+    },
+    {
+      "path": "packages/bun-usockets/src/loop.c",
+      "status": "M"
+    },
+    {
+      "path": "patches/libuv/win-poll-rearm-before-callback.patch",
+      "status": "A"
+    },
+    {
+      "path": "patches/lolhtml/0001-rlib-only.patch",
+      "status": "A"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "status": "M"
+    },
+    {
+      "path": "scripts/b2-aggregate-blocked.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/b2-cycle-args.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/build.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/CLAUDE.md",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/bun.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/cargo-config.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/build/ci.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/clean.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/codegen.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/compile.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/config.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/configure.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/depVersionsHeader.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/deps/libuv.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/deps/lolhtml.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/deps/mimalloc.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/deps/webkit.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/download.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/fetch-cli.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/flags.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/profiles.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/rules.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/rust.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/build/shell.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/shims.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/source.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/stream.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/tools.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/workarounds.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/build/zig.ts",
+      "status": "D"
+    },
+    {
+      "path": "scripts/categorize-ci-failures.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/ci-errors-to-tasks.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/ci-log-to-results-json.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/ci-monitor-check.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/classify-crash-leak-issues.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/crate-dag.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/fetch-issues-to-sqlite.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/find-build.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/fix-imports.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/fix-mod-paths.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/fix-vm-import.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/gen-cargo.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/gen-link-stubs.sh",
+      "status": "A"
+    },
+    {
+      "path": "scripts/glob-sources.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/migrate-hostfn-vm.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/pack-codegen-for-zig-team.ts",
+      "status": "D"
+    },
+    {
+      "path": "scripts/patch-genclasses-paths.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/port-batch.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/port-cycle.sh",
+      "status": "A"
+    },
+    {
+      "path": "scripts/prefetch-deps.ts",
+      "status": "M"
+    },
+    {
+      "path": "scripts/runner.node.mjs",
+      "status": "M"
+    },
+    {
+      "path": "scripts/rust-check-all.ts",
+      "status": "A"
+    },
+    {
+      "path": "scripts/test-scoreboard.sh",
+      "status": "A"
+    },
+    {
+      "path": "scripts/utils.mjs",
+      "status": "M"
+    },
+    {
+      "path": "scripts/verify-baseline-static/Cargo.toml",
+      "status": "M"
+    },
+    {
+      "path": "scripts/verify-baseline-static/allowlist-aarch64.txt",
+      "status": "M"
+    },
+    {
+      "path": "scripts/verify-baseline-static/allowlist-x64-windows.txt",
+      "status": "M"
+    },
+    {
+      "path": "scripts/verify-baseline-static/allowlist-x64.txt",
+      "status": "M"
+    },
+    {
+      "path": "scripts/verify-baseline-static/src/main.rs",
+      "status": "M"
+    },
+    {
+      "path": "src/CLAUDE.md",
+      "status": "M"
+    },
+    {
+      "path": "src/analytics/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/analytics/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/analytics/schema.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/api/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/api/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/ast.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/ast_memory_allocator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/ast_memory_allocator.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/ast_result.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/b.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/b.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/base.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/base.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/binding.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/char_freq.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/char_freq.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/e.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/e.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/expr.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/expr.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/fold_string_addition.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/fold_string_addition.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/g.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/g.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/import_record.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/known_global.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/known_global.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/lexer_log.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/lexer_tables.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/loader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/logger.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/new_store.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/new_store.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/nodes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/op.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/op.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/runtime.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/s.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/s.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/scope.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/scope.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/server_component_boundary.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/server_component_boundary.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/stmt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/stmt.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/symbol.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/symbol.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/target.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/transpiler_cache.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/ts.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/ts.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast/use_directive.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast/use_directive.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/ast_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/ast_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ast_jsc/logger_jsc.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/base64/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/base64/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/boringssl/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/boringssl/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/boringssl_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/boringssl_sys/boringssl.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/boringssl_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/brotli/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/brotli/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/brotli_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/brotli_sys/brotli_c.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/brotli_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun.js.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun.js.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/bun.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/bun_alloc/BufferFallbackAllocator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/MaxHeapAllocator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/MimallocArena.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/NullableAllocator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/ast_alloc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/basic.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/c_thunks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/fallback.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/fallback/z.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/hashbrown_bridge.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/heap_breakdown.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/maybe_owned.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/memory.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_alloc/stack_fallback.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_bin/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_bin/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_bin/phase_c_exports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/Global.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/Progress.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/atomic_cell.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/bounded_array.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/bounded_array.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/bun_core/deprecated.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/env.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/env_var.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/external_shared.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/feature_flags.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/fmt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/heap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/hint.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/output.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/result.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/HashedString.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/MutableString.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/PathString.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/SmolStr.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/StringBuilder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/StringJoiner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/escapeRegExp.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/identifier.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/immutable.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/immutable/escapeHTML.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/immutable/escapeHTML.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/bun_core/string/immutable/exact_size_matcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/immutable/exact_size_matcher.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/bun_core/string/immutable/grapheme.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/immutable/grapheme.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/bun_core/string/immutable/grapheme_tables.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/immutable/grapheme_tables.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/bun_core/string/immutable/unicode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/immutable/unicode.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/bun_core/string/immutable/visible.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/immutable/visible.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/bun_core/string/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/write.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/string/wtf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/thread_id.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/tty.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/util.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/windows_sys.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core/wtf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core_macros/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_core_macros/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_output_tags/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/bun_output_tags/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/AstBuilder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/BundleThread.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/Chunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/DeferredBatchTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/Graph.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/HTMLImportManifest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/HTMLScanner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/IndexStringMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/LinkerContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/LinkerGraph.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/OutputFile.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/ParseTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/PathToSourceIndexMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/ServerComponentParseTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/ThreadPool.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/analyze_transpiled_module.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/barrel_imports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/bundle_v2.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/bundled_ast.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/bundled_ast.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/bundler/cache.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/defines.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/entry_points.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/MetafileBuilder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/OutputFileListBuilder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/StaticRouteVisitor.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/computeChunks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/computeCrossChunkDependencies.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/convertStmtsForChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/convertStmtsForChunkForDevServer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/doStep5.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/findAllImportedPartsInJSOrder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/findImportedCSSFilesInJSOrder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/findImportedFilesInCSSOrder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/generateChunksInParallel.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/generateCodeForFileInChunkJS.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/generateCodeForLazyExport.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/generateCompileResultForCssChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/generateCompileResultForHtmlChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/generateCompileResultForJSChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/postProcessCSSChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/postProcessHTMLChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/postProcessJSChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/prepareCssAstsForChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/renameSymbolsInChunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/scanImportsAndExports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/linker_context/writeOutputFilesToDisk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/options.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/transpiler.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler/ungate_support.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler_jsc/PluginRunner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler_jsc/analyze_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler_jsc/analyze_jsc.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/bundler_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler_jsc/options_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bundler_jsc/source_map_mode_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bunfig/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/bunfig/arguments.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bunfig/bunfig.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/bunfig/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/cares_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/cares_sys/c_ares.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/cares_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/clap/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/clap/args.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/clap/comptime.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/clap/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/clap/streaming.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/clap_macros/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/clap_macros/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/cli",
+      "status": "A"
+    },
+    {
+      "path": "src/codegen/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/codegen/bake-codegen.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/codegen/bundle-modules.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/codegen/class-definitions.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/codegen/cppbind.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/codegen/generate-classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/codegen/generate-host-exports.ts",
+      "status": "A"
+    },
+    {
+      "path": "src/codegen/generate-js2native.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/codegen/generate-jssink.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/codegen/generate-string-map.ts",
+      "status": "A"
+    },
+    {
+      "path": "src/codegen/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/codegen/process_windows_translate_c.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/StaticHashMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/array_hash_map.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/array_list.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/bit_set.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/comptime_string_map.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/hive_array.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/identity_context.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/linear_fifo.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/multi_array_list.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/pool.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/string_map.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/vec_ext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/collections/zig_hash_map.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/crash_handler/CPUFeatures.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/crash_handler/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/crash_handler/handle_oom.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/crash_handler/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/csrf/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/csrf/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/css/compat.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/context.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/css_modules.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/css_parser.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/declaration.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/dependencies.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/error.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/generics.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/logical.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/media_query.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/prefixes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/printer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/align.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/animation.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/background.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/border.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/border_image.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/border_radius.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/box_shadow.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/contain.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/css_modules.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/custom.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/display.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/effects.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/flex.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/font.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/grid.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/list.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/margin_padding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/masking.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/outline.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/overflow.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/position.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/prefix_handler.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/properties_generated.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/properties_impl.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/shape.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/size.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/svg.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/text.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/transform.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/transition.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/properties/ui.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/container.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/counter_style.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/custom_media.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/document.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/font_face.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/font_palette_values.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/import.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/keyframes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/layer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/media.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/namespace.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/nesting.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/page.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/property.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/scope.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/starting_style.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/style.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/supports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/tailwind.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/unknown.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/rules/viewport.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/selectors/builder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/selectors/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/selectors/parser.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/selectors/selector.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/small_list.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/sourcemap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/targets.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/alpha.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/angle.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/calc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/color.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/color_generated.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/css_string.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/easing.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/gradient.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/ident.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/image.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/length.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/number.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/percentage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/position.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/ratio.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/rect.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/resolution.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/size.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/syntax.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/time.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css/values/url.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css_derive/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/css_derive/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/css_jsc/color_js.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css_jsc/css_internals.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css_jsc/error_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/css_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/dispatch/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/dispatch/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/dispatch/tests/shape.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/dns/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/dns/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/dotenv/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/dotenv/env_loader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/dotenv/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/errno/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/errno/darwin_errno.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/errno/freebsd_errno.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/errno/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/errno/linux_errno.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/errno/windows_errno.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/AnyEventLoop.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/AnyTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/AnyTaskWithExtraContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/AutoFlusher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/ConcurrentTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/DeferredTaskQueue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/EventLoopTimer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/ManagedTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/MiniEventLoop.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/SpawnSyncEventLoop.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/event_loop/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/exe_format/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/exe_format/elf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/exe_format/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/exe_format/macho.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/exe_format/macho_types.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/exe_format/pe.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/exe_format/pe.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/glob/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/glob/GlobWalker.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/glob/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/glob/matcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/hash/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/hash/adler32.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/hash/cityhash.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/hash/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/hash/murmur.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/hash/rapidhash.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/hash/xxhash.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/highway/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/highway/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/AsyncHTTP.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/http/CertificateInfo.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/Decompressor.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/H2Client.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/H3Client.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/HTTPCertError.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/HTTPContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/HTTPRequestBody.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/HTTPThread.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/HeaderBuilder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/HeaderValueIterator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/Headers.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/InitError.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/InternalState.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/ProxyTunnel.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/SendFile.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/Signals.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/ThreadSafeStreamBuffer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h2_client/ClientSession.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h2_client/PendingConnect.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h2_client/Stream.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h2_client/dispatch.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h2_client/encode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h3_client/AltSvc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h3_client/ClientContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h3_client/ClientSession.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h3_client/PendingConnect.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h3_client/Stream.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h3_client/callbacks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/h3_client/encode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/lshpack.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/ssl_config.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/websocket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/websocket_http_client.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http/zlib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/fetch_enums_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/headers_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/method_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/websocket_client.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/websocket_client/CppWebSocket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/websocket_client/WebSocketDeflate.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/websocket_client/WebSocketProxy.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/websocket_client/WebSocketProxyTunnel.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_jsc/websocket_client/WebSocketUpgradeClient.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/ETag.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/Encoding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/FetchCacheMode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/FetchRedirect.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/FetchRequestMode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/Method.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/MimeType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/URLPath.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/h2.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/http_types/mime_type_list_enum.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ini/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/ini/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/install/ConfigVersion.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/ExternalSlice.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/NetworkTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageInstall.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageInstaller.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/CommandLineArguments.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/CommandLineArguments.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/install/PackageManager/PackageJSONEditor.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/PackageManagerDirectories.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/PackageManagerEnqueue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/PackageManagerLifecycle.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/PackageManagerOptions.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/PackageManagerResolution.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/PopulateManifestCache.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/ProgressStrings.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/UpdateRequest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/WorkspacePackageJSONCache.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/install_with_manager.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/patchPackage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/processDependencyList.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/runTasks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/security_scanner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManager/updatePackageJSONAndInstall.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManagerTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/PackageManifestMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/TarballStream.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/auto_installer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/bin.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/build.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/dependency.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/extract_tarball.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/hoisted_install.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/hosted_git_info.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/integrity.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/isolated_install.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/isolated_install/FileCloner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/isolated_install/FileCopier.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/isolated_install/Hardlinker.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/isolated_install/Installer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/isolated_install/Store.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/isolated_install/Symlinker.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lifecycle_script_runner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/install/lockfile/Buffers.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/CatalogMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/OverrideMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/Package.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/Package/Meta.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/Package/Scripts.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/Package/WorkspaceMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/Tree.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/bun.lock.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/bun.lockb.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/lockfile_json_stringify_for_debugging.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/printer/Yarn.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/lockfile/printer/tree_printer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/migration.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/npm.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/padding_checker.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/patch_install.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/pnpm.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/postinstall_optimizer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/repository.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/resolution.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/resolvers/folder_resolver.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/versioned_url.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/windows-shim/.gitignore",
+      "status": "M"
+    },
+    {
+      "path": "src/install/windows-shim/BinLinkingShim.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/windows-shim/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/install/windows-shim/bun_shim_impl.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/windows-shim/main.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install/yarn.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/install_jsc/dependency_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_jsc/hosted_git_info_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_jsc/ini_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_jsc/install_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_jsc/npm_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_jsc/update_request_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_types/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/install_types/NodeLinker.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_types/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/install_types/resolver_hooks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/io/MaxBuf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/ParentDeathWatchdog.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/ParentDeathWatchdog.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/io/PipeReader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/PipeWriter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/heap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/keep_alive.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/openForWriting.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/pipes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/posix_event_loop.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/posix_event_loop.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/io/source.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/stub_event_loop.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/stub_event_loop.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/io/windows_event_loop.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/io/windows_event_loop.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/io/write.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/js/builtins/ProcessObjectInternals.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/js/internal/debugger.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/js/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js/node/_http_server.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/js_parser/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/benches/string_map_vs_phf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/defines_table.generated.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/defines_table.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/defines_table.string-map.ts",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/fold.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/fold.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/lexer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/lower/lower_decorators.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/lower/lower_decorators.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/lower/lower_esm_exports_hmr.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/lower/lower_esm_exports_hmr.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/lower/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/p.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/p.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_entry.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_entry.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_fn.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_fn.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_import_export.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_import_export.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_jsx.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_jsx.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_prefix.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_prefix.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_property.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_property.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_skip_typescript.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_skip_typescript.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_stmt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_stmt.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_suffix.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_suffix.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parse/parse_typescript.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/parse/parse_typescript.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/parser.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/repl_transforms.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/repl_transforms.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/scan/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/scan/scan_imports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/scan/scan_imports.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/scan/scan_side_effects.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/scan/scan_side_effects.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/scan/scan_symbols.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/scan/scan_symbols.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/typescript.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/typescript.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/visit/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/visit/visit.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/visit/visit_binary.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/visit/visit_binary.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/visit/visit_expr.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/visit/visit_expr.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser/visit/visit_stmt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser/visit/visit_stmt.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/js_parser_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser_jsc/Macro.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser_jsc/expr_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_parser_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_printer/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/js_printer/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/js_printer/renamer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/AbortSignal.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/AnyPromise.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/AsyncModule.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/BuildMessage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/BunCPUProfiler.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/BunHeapProfiler.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/CachedBytecode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/CallFrame.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/CommonAbortReason.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/CommonStrings.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ConcurrentPromiseTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ConsoleObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ConsoleObject.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/Counters.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/CppTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/CustomGetterSetter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/DOMFormData.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/DOMURL.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/Debugger.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/DecodedJSValue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/DeferredError.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/DeprecatedStrong.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ErrorCode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/Errorable.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/EventLoopHandle.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/EventType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/Exception.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/FFI.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/FetchHeaders.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/GarbageCollectionController.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/GetterSetter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/HTTPServerAgent.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSArray.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSArrayIterator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSBigInt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSCScheduler.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSCell.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSErrorCode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSFunction.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSGlobalObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSGlobalObject.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/JSInternalPromise.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSModuleLoader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSONLineBuffer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSPromise.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSPromiseRejectionOperation.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSPropertyIterator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSRef.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSRuntimeType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSSecrets.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSString.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSUint8Array.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSValue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/JSValue.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/MarkedArgumentBuffer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ModuleLoader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/NodeModuleModule.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/PluginRunner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/PosixSignalHandle.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ProcessAutoKiller.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/RefString.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/RegularExpression.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ResolveMessage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ResolvedSource.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/RuntimeTranspilerCache.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/RuntimeTranspilerCache.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/RuntimeTranspilerStore.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/SavedSourceMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ScriptExecutionStatus.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/SourceProvider.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/SourceType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/StringBuilder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/Strong.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/SystemError.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/Task.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/Task.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/TextCodec.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/TopExceptionScope.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/URL.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/URLSearchParams.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/VM.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/VirtualMachine.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/WTF.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/Weak.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/WorkTask.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ZigErrorType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ZigException.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ZigStackFrame.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ZigStackFrameCode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ZigStackFramePosition.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ZigStackTrace.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ZigString.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/any_task_job.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/array_buffer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/bindgen.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/bindgen_test.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/bindings/BunClientData.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/BunProcessReportObjectWindows.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/BunString.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/GeneratedBindings.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/bindings/GeneratedJS2Native.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/bindings/JSEnvironmentVariableMap.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/NodeDirent.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/NodeHTTP.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/ProcessBindingTTYWrap.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/SecretsWindows.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/ZigGlobalObject.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/ZigSourceProvider.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/c-bindings.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/headers-handwritten.h",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/helpers.h",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/napi.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/webcore/HTTPHeaderField.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/webcore/Worker.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/bindings/workaround-missing-symbols.cpp",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/btjs.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/build.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/bun_string_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/codegen.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/comptime_string_map_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/config.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/cpp.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/event_loop.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/ffi_imports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/fmt_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/generated.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/generated_classes_list.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/host_fn.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/host_object.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/hot_reloader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/hot_reloader.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/ipc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/javascript_core_c_api.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/jsc.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/node_path.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/rare_data.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/rare_data.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/jsc/resolve_path_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/resolver_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/sizes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/static_export.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/uuid.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/virtual_machine_exports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/web_worker.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc/webcore_types.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc_macros/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc_macros/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/jsc_stub.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/libarchive/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/libarchive/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/libarchive_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/libarchive_sys/bindings.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/libarchive_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/libdeflate_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/libdeflate_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/libdeflate_sys/libdeflate.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/libuv_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/libuv_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/libuv_sys/libuv.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/lolhtml_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/lolhtml_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/lolhtml_sys/lol_html.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/main_test.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/main_test.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/main_wasm.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/md/ansi_renderer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/autolinks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/blocks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/containers.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/entity.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/helpers.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/html_renderer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/inlines.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/line_analysis.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/links.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/parser.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/ref_defs.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/render_blocks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/root.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/types.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/md/unicode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/meta/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/meta/bits.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/meta/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/meta/tagged_union.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/meta/traits.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/mimalloc_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/mimalloc_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/mimalloc_sys/mimalloc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/napi/node_api.h",
+      "status": "D"
+    },
+    {
+      "path": "src/napi/node_api_types.h",
+      "status": "D"
+    },
+    {
+      "path": "src/node-fallbacks/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/node-fallbacks/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/opaque/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/opaque/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/CommandTag.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/options_types/bundle_enums.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/code_coverage_options.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/command_tag.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/compile_target.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/context.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/global_cache.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/jsx.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/offline_mode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/options_types/schema.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/output/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/output/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/interchange.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/parsers/json.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/json.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/parsers/json5.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/json5.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/parsers/json_lexer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/toml.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/toml.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/parsers/toml/lexer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/toml/lexer.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/parsers/yaml.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/parsers/yaml.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/patch/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/patch/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/patch_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/patch_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/patch_jsc/testing.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/EnvPath.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/Path.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/component_iterator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/path_buffer_pool.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/path_char.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/resolve_path.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/string_paths.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/paths/string_paths.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/perf/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/perf/generated_perf_trace_events.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/perf/hw_timer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/perf/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/perf/system_timer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/perf/tracy.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/picohttp/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/picohttp/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/picohttp_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/picohttp_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/picohttp_sys/picohttpparser.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/platform/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/platform/darwin.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/platform/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/platform/linux.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/Cow.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/CowSlice.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/meta.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/owned.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/parent_ref.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/raw_ref_count.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/ref_count.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/shared.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/tagged_pointer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/ptr/weak_ptr.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolve_builtins/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/resolve_builtins/HardcodedModule.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolve_builtins/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolve_builtins/node_builtins.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/data_url.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/dir_info.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/fs.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/fs/stat_hash.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/node_fallbacks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/package_json.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/resolver/tsconfig_json.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/router/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/router/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/router/router.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/allocators/LinuxMemFdAllocator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/allocators/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/Archive.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/BunObject.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/BunObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/BunObject.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/HashObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/JSBundler.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/JSBundler.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/JSON5Object.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/JSONCObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/JSTranspiler.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/MarkdownObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/NativePromiseContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/ResumableSink.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/Shell.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/TOMLObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/UnsafeObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/YAMLObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/SSLContextCache.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/SecureContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/Terminal.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/h2_frame_parser.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/js_bun_spawn_bindings.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/process.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/process.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/bun/spawn.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/spawn/stdio.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/subprocess.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/subprocess/Readable.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/subprocess/ResourceUsage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/subprocess/StaticPipeWriter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/subprocess/SubprocessPipeReader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/subprocess/Writable.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/bun/x509.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/crash_handler_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/cron.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/cron_parser.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/csrf_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/filesystem_router.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/glob.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/html_rewriter.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/html_rewriter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/js_bundle_completion_task.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/lolhtml_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/output_file_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/sourcemap.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/sql.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/api/standalone_graph_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/api/streams.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/bake/BakeGlobalObject.cpp",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/BakeGlobalObject.h",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/BakeProduction.cpp",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/BakeProduction.h",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/BakeSourceProvider.cpp",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/BakeSourceProvider.h",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer.bind.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/Assets.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/Assets.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/DirectoryWatchStore.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/DirectoryWatchStore.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/ErrorReportRequest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/ErrorReportRequest.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/HmrSocket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/HmrSocket.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/HotReloadEvent.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/HotReloadEvent.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/IncrementalGraph.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/IncrementalGraph.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/PackedMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/PackedMap.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/RouteBundle.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/RouteBundle.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/SerializedFailure.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/SerializedFailure.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/SourceMapStore.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/SourceMapStore.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/WatcherAtomics.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/WatcherAtomics.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/memory_cost.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/DevServer/memory_cost.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServerSourceProvider.cpp",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/DevServerSourceProvider.h",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/FrameworkRouter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/FrameworkRouter.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/bake.bind.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/bake.d.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/bake.private.d.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/bake.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/bake_body.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/bun-framework-react/client.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/bun-framework-react/index.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/bun-framework-react/server.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/bun-framework-react/ssr.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/JavaScriptSyntaxHighlighter.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/JavaScriptSyntaxHighlighter.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/JavaScriptSyntaxHighlighterComponent.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/css-reloader.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/data-view.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/error-serialization.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/icons/dismiss.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/icons/next.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/icons/prev.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/inspect.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/overlay.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/overlay.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/stack-trace.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/client/websocket.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/debug.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/dev_server/assets.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/dev_server/incremental_graph.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/dev_server/lifecycle.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/dev_server/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/dev_server/packed_map.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/dev_server/route_bundle.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/dev_server/serialized_failure.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/dev_server/source_map_store.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/enums.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/hmr-module.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/hmr-runtime-client.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/hmr-runtime-error.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/hmr-runtime-server.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/incremental_visualizer.html",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/memory_visualizer.html",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/package.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/production.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/bake/production.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/server/stack-trace-stub.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/shared.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/bake/tsconfig.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/build.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/Arguments.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/Arguments.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/add_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/add_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/add_completions.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/add_completions.txt",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/add_completions.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/audit_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/audit_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/build_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/build_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/bunfig.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/bunx_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/bunx_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/ci_info.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/ci_info.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/cli.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/colon_list_type.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/colon_list_type.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/SourceFileProjectGenerator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/create/SourceFileProjectGenerator.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/REPLACE_ME_WITH_YOUR_APP_FILE_NAME.build.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/REPLACE_ME_WITH_YOUR_APP_FILE_NAME.client.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/REPLACE_ME_WITH_YOUR_APP_FILE_NAME.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/REPLACE_ME_WITH_YOUR_APP_FILE_NAME.html",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/bunfig.toml",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/components.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/lib/utils.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/package.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/styles/globals.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/styles/index.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-shadcn-spa/tsconfig.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-spa/REPLACE_ME_WITH_YOUR_APP_FILE_NAME.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-spa/package.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create/projects/react-tailwind-spa/REPLACE_ME_WITH_YOUR_APP_FILE_NAME.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/create_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/create_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/discord_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/discord_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/exec_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/exec_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/filter_arg.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/filter_arg.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/filter_run.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/filter_run.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/fuzzilli_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/fuzzilli_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/README.default.md",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/README2.default.md",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/gitignore.default",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/bun-env.d.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/bun.lock",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/bunfig.toml",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/package.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/src/APITester.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/src/App.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/src/frontend.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/src/index.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/src/index.html",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/src/index.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/src/logo.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/src/react.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-app/tsconfig.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/build.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/bun-env.d.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/bun.lock",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/bunfig.toml",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/components.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/package.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/APITester.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/App.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/components/ui/button.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/components/ui/card.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/components/ui/input.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/components/ui/label.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/components/ui/select.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/components/ui/textarea.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/frontend.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/index.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/index.html",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/index.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/lib/utils.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/logo.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/src/react.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/styles/globals.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-shadcn/tsconfig.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/build.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/bun-env.d.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/bun.lock",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/bunfig.toml",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/package.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/src/APITester.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/src/App.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/src/frontend.tsx",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/src/index.css",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/src/index.html",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/src/index.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/src/logo.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/src/react.svg",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/react-tailwind/tsconfig.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/rule.md",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init/tsconfig.default.json",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/init_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/init_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/install.ps1",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/install.sh",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/install_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/install_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/install_completions_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/install_completions_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/link_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/link_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/list-of-yarn-commands.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/list-of-yarn-commands.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/multi_run.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/multi_run.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/open.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/open.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/outdated_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/outdated_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/pack_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/pack_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/package_manager_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/package_manager_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/patch_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/patch_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/patch_commit_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/patch_commit_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/pm_pkg_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/pm_pkg_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/pm_trusted_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/pm_trusted_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/pm_update_package_json.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/pm_version_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/pm_version_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/pm_view_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/pm_view_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/pm_why_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/pm_why_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/publish_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/publish_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/remove_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/remove_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/repl.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/repl.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/repl_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/repl_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/run_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/run_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/scan_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/scan_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/shell_completions.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/shell_completions.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/ChangedFilesFilter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/ChangedFilesFilter.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/ParallelRunner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/ParallelRunner.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/Scanner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/Scanner.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/Channel.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/Channel.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/Coordinator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/Coordinator.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/FileRange.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/FileRange.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/Frame.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/Frame.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/Worker.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/Worker.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/aggregate.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/aggregate.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/runner.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test/parallel/runner.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/test_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/test_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/uninstall.ps1",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/unlink_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/unlink_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/update_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/update_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/update_interactive_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/update_interactive_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/upgrade_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/upgrade_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/which_npm_client.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/which_npm_client.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/cli/why_command.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/cli/why_command.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/crypto/CryptoHasher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/crypto/EVP.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/crypto/HMAC.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/crypto/PBKDF2.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/crypto/PasswordObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/crypto/boringssl_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/crypto/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/crypto/pwhash.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/dispatch.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/dispatch_js2native.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/dns_jsc/cares_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/dns_jsc/dns.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/dns_jsc/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/dns_jsc/options_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/ffi/FFIObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/ffi/abi_type.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/ffi/ffi.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/ffi/ffi_body.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/ffi/host_fns.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/ffi/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/ffi_imports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/generated_classes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/generated_host_exports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/generated_js2native.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/generated_jssink.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/hw_exports.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/Image.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/backend_coregraphics.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/backend_wic.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/codec_bmp.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/codec_gif.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/codec_jpeg.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/codec_png.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/codec_webp.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/codecs.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/exif.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/quantize.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/image/thumbhash.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/ipc_host.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/jsc_hooks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/napi/js_native_api.h",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/napi/js_native_api_types.h",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/napi/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/napi/napi.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/napi/napi_body.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/napi/node_api.h",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/napi/node_api_types.h",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/Stat.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/StatFS.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/assert/myers_diff.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/buffer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/dir_iterator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/fs_events.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/net/BlockList.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/node/node_assert.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_assert_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_cluster_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_crypto_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_error_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_fs.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_fs_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_fs_constant.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_fs_stat_watcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_fs_watcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_http_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_net_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_os.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_process.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_util_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/node_zlib_binding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/nodejs_error_code.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/os/constants.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/path.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/path_watcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/time_like.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/types.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/util/parse_args.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/util/parse_args_utils.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/util/validators.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/uv_signal_handle_windows.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/win_watcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/zlib/NativeBrotli.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/zlib/NativeZlib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/node/zlib/NativeZstd.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/AnyRequestContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/FileResponseStream.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/FileRoute.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/HTMLBundle.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/HTTPStatusText.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/InspectorBunFrontendDevServerAgent.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/NodeHTTPResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/RangeRequest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/RequestContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/ServerConfig.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/ServerWebSocket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/StaticRoute.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/WebSocketServerContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/server/server.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/server/server_body.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/AllocScope.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/Builtin.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/Builtin.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/EnvMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/EnvMap.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/EnvStr.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/EnvStr.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/IO.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/IO.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/IOReader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/IOReader.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/IOWriter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/IOWriter.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/ParsedShellScript.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/ParsedShellScript.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/RefCountedStr.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/RefCountedStr.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/Yield.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/Yield.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/basename.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/basename.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/cat.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/cat.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/cd.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/cd.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/cp.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/cp.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/dirname.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/dirname.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/echo.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/echo.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/exit.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/exit.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/export.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/export.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/false_.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/false_.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/ls.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/ls.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/mkdir.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/mkdir.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/mv.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/mv.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/pwd.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/pwd.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/rm.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/rm.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/seq.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/seq.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/touch.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/touch.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/true_.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/true_.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/which.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/which.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/builtin/yes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/builtin/yes.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/dispatch_tasks.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/interpreter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/interpreter.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/shell.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/shell_body.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Assigns.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Assigns.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Async.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Async.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Base.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Base.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Binary.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Binary.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Cmd.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Cmd.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/CondExpr.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/CondExpr.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Expansion.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Expansion.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/If.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/If.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Pipeline.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Pipeline.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Script.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Script.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Stmt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Stmt.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/states/Subshell.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/states/Subshell.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/subproc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/subproc.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/shell/util.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/shell/util.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/socket/Handlers.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/Listener.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/SSLConfig.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/SocketAddress.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/UpgradedDuplex.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/WindowsNamedPipe.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/WindowsNamedPipeContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/socket_body.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/sockets.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/socket/tls_socket_functions.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/udp_socket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/uws_dispatch.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/uws_handlers.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/socket/uws_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/Collection.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/Collection.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/DoneCallback.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/DoneCallback.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/Execution.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/Execution.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/Order.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/Order.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/ScopeFunctions.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/ScopeFunctions.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/bun_test.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/bun_test.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/debug.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/debug.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/diff/diff_match_patch.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/diff/diff_match_patch.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/diff/printDiff.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/diff/printDiff.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/diff_format.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/diff_format.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBe.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBe.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeArray.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeArray.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeArrayOfSize.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeArrayOfSize.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeBoolean.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeBoolean.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeCloseTo.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeCloseTo.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeDate.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeDate.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeDefined.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeDefined.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeEmpty.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeEmpty.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeEmptyObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeEmptyObject.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeEven.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeEven.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeFalse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeFalse.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeFalsy.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeFalsy.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeFinite.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeFinite.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeFunction.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeFunction.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeGreaterThan.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeGreaterThan.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeGreaterThanOrEqual.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeGreaterThanOrEqual.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeInstanceOf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeInstanceOf.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeInteger.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeInteger.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeLessThan.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeLessThan.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeLessThanOrEqual.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeLessThanOrEqual.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNaN.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNaN.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNegative.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNegative.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNil.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNil.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNull.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNull.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNumber.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeNumber.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeObject.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeOdd.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeOdd.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeOneOf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeOneOf.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBePositive.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBePositive.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeString.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeString.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeSymbol.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeSymbol.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeTrue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeTrue.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeTruthy.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeTruthy.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeTypeOf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeTypeOf.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeUndefined.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeUndefined.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeValidDate.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeValidDate.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeWithin.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toBeWithin.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContain.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContain.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainAllKeys.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainAllKeys.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainAllValues.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainAllValues.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainAnyKeys.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainAnyKeys.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainAnyValues.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainAnyValues.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainEqual.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainEqual.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainKey.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainKey.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainKeys.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainKeys.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainValue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainValue.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainValues.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toContainValues.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toEndWith.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toEndWith.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toEqual.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toEqual.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toEqualIgnoringWhitespace.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toEqualIgnoringWhitespace.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenCalled.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenCalled.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenCalledOnce.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenCalledOnce.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenCalledTimes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenCalledTimes.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenCalledWith.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenCalledWith.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenLastCalledWith.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenLastCalledWith.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenNthCalledWith.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveBeenNthCalledWith.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveLastReturnedWith.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveLastReturnedWith.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveLength.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveLength.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveNthReturnedWith.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveNthReturnedWith.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveProperty.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveProperty.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveReturned.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveReturned.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveReturnedTimes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveReturnedTimes.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveReturnedWith.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toHaveReturnedWith.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toInclude.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toInclude.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toIncludeRepeated.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toIncludeRepeated.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toMatch.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toMatch.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toMatchInlineSnapshot.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toMatchInlineSnapshot.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toMatchObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toMatchObject.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toMatchSnapshot.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toMatchSnapshot.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toSatisfy.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toSatisfy.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toStartWith.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toStartWith.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toStrictEqual.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toStrictEqual.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toThrow.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toThrow.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toThrowErrorMatchingInlineSnapshot.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toThrowErrorMatchingInlineSnapshot.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toThrowErrorMatchingSnapshot.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/expect/toThrowErrorMatchingSnapshot.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/harness/fixtures.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/harness/fixtures.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/harness/fixtures/package.json",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/harness/fixtures/simple-component.js",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/harness/fixtures/simple-component.tsx",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/harness/fixtures/tsconfig.json",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/harness/recover.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/harness/recover.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/jest.classes.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/jest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/jest.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/pretty_format.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/pretty_format.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/snapshot.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/snapshot.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/timers/FakeTimers.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/test_runner/timers/FakeTimers.zig",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/test_runner/timers/FakeTimersConfig.bindv2.ts",
+      "status": "R"
+    },
+    {
+      "path": "src/runtime/timer/DateHeaderTimer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/timer/EventLoopDelayMonitor.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/timer/ImmediateObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/timer/TimeoutObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/timer/Timer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/timer/WTFTimer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/timer/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/timer/timer_object_internals.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/ValkeyCommand.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/ValkeyContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/index.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/js_valkey.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/js_valkey_functions.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/protocol_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/valkey.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/valkey_jsc/valkey.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/ArrayBufferSink.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/BakeResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/Blob.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/Body.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/ByteBlobLoader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/ByteStream.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/CookieMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/Crypto.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/EncodingLabel.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/FileReader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/FileSink.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/FormData.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/ObjectURLRegistry.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/ReadableStream.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/Request.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/Response.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/ResumableSink.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/ResumableSink.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/webcore/S3Client.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/S3File.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/S3Stat.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/ScriptExecutionContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/Sink.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/TextDecoder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/TextEncoder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/TextEncoderStreamEncoder.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/blob/Store.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/blob/copy_file.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/blob/read_file.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/blob/write_file.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/encoding.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/fetch.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/fetch/FetchTasklet.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/fetch/FetchTasklet.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/webcore/headers_ref.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/prompt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/response.classes.ts",
+      "status": "M"
+    },
+    {
+      "path": "src/runtime/webcore/s3/client.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/s3/credentials_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/s3/download_stream.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/s3/error_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/s3/list_objects.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/s3/multipart.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/s3/multipart_options.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/s3/simple_request.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/streams.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webcore/wasm_streaming.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webview/ChromeProcess.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webview/HostProcess.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/runtime/webview/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/s3_signing/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/s3_signing/acl.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/s3_signing/credentials.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/s3_signing/error.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/s3_signing/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/s3_signing/storage_class.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/safety/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/safety/CriticalSection.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/safety/ThreadLock.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/safety/alloc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/safety/asan.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/safety/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/safety/thread_id.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/semver/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/semver/SemverQuery.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/semver/SemverRange.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/semver/Version.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/semver/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/semver_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/semver_jsc/SemverObject.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/semver_jsc/SemverString_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/semver_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sha_hmac/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/sha_hmac/hmac.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sha_hmac/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sha_hmac/sha.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/shell_parser/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/shell_parser/braces.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/shell_parser/braces.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/shell_parser/json_fmt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/shell_parser/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/shell_parser/parse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/simdutf_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/simdutf_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/simdutf_sys/simdutf.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap/Chunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap/InternalSourceMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap/LineOffsetTable.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap/Mapping.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap/ParsedSourceMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap_jsc/CodeCoverage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap_jsc/JSSourceMap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap_jsc/internal_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sourcemap_jsc/source_provider.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/spawn/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/spawn/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/spawn/process.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/spawn/static_pipe_writer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/spawn_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/spawn_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/spawn_sys/posix_spawn.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/spawn_sys/spawn_process.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/AuthMethod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/Capabilities.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/ConnectionState.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/MySQLParam.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/MySQLQueryResult.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/MySQLRequest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/MySQLTypes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/QueryStatus.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/SSLMode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/StatusFlags.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/TLSStatus.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/AnyMySQLError.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/Auth.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/AuthSwitchRequest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/AuthSwitchResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/CharacterSet.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/ColumnDefinition41.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/CommandType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/EOFPacket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/EncodeInt.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/ErrorPacket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/HandshakeResponse41.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/HandshakeV10.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/LocalInfileRequest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/NewReader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/NewWriter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/OKPacket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/PacketHeader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/PacketType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/PreparedStatement.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/Query.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/ResultSetHeader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/SSLRequest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/StackReader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/mysql/protocol/StmtPrepareOKPacket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/AnyPostgresError.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/CommandTag.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/PostgresProtocol.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/PostgresTypes.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/SSLMode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/SocketMonitor.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/Status.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/TLSStatus.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/ArrayList.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/Authentication.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/BackendKeyData.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/Close.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/CommandComplete.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/CopyData.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/CopyFail.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/CopyInResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/CopyOutResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/DataRow.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/DecoderWrap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/Describe.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/ErrorResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/Execute.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/FieldDescription.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/FieldMessage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/FieldType.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/NegotiateProtocolVersion.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/NewReader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/NewWriter.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/NoticeResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/NotificationResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/ParameterDescription.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/ParameterStatus.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/Parse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/PasswordMessage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/PortalOrPreparedStatement.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/ReadyForQuery.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/RowDescription.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/SASLInitialResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/SASLResponse.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/StackReader.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/StartupMessage.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/TransactionStatusIndicator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/WriteWrap.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/protocol/zHelpers.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/types/Tag.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/postgres/types/int_types.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/shared/ColumnIdentifier.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/shared/ConnectionFlags.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/shared/Data.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql/shared/SQLQueryResultMode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/JSMySQLConnection.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/JSMySQLConnection.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/sql_jsc/mysql/JSMySQLQuery.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/MySQLConnection.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/MySQLContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/MySQLQuery.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/MySQLQuery.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/sql_jsc/mysql/MySQLRequestQueue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/MySQLStatement.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/MySQLValue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/protocol/DecodeBinaryValue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/protocol/ResultSet.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/protocol/Signature.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/protocol/any_mysql_error_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/mysql/protocol/error_packet_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/AuthenticationState.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/DataCell.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresRequest.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresRequest.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresSQLConnection.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresSQLConnection.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresSQLContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresSQLQuery.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresSQLQuery.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresSQLStatement.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/PostgresSQLStatement.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/sql_jsc/postgres/SASL.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/Signature.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/command_tag_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/error_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/protocol/error_response_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/protocol/notice_response_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/types/PostgresString.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/types/bool.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/types/bytea.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/types/date.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/types/json.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/postgres/types/tag_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/shared/CachedStructure.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/shared/ObjectIterator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/shared/QueryBindingIterator.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sql_jsc/shared/SQLDataCell.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/standalone_graph/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/standalone_graph/StandaloneModuleGraph.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/standalone_graph/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/Error.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/PosixStat.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/SignalCode.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/copy_file.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/coreutils_error_map.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/dir.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/fd.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/file.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/libuv_error_map.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/linux_syscall.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/sys_uv.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/tmp.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/walker_skippable.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/windows/env.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys/windows/mod.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/sys_jsc/error_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys_jsc/fd_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/sys_jsc/signal_code_jsc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/tcc_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/tcc_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/tcc_sys/tcc.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/Condition.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/Futex.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/Mutex.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/ResetEvent.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/RwLock.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/Semaphore.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/ThreadPool.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/WaitGroup.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/channel.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/guarded.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/unbounded_queue.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/threading/work_pool.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/transpiler/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/transpiler/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/unicode/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/unicode/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/unicode/uucode/grapheme_gen.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/unicode/uucode/lut.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/unicode/uucode/uucode_config.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/unit_test.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/url/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/url/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/url_jsc/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/url_jsc/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/uws/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/App.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/BodyReaderMixin.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/ConnectingSocket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/InternalLoopData.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/ListenSocket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/Loop.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/Request.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/Response.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/SocketContext.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/SocketGroup.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/SocketKind.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/Timer.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/WebSocket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/h3.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/quic.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/quic/Context.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/quic/Header.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/quic/PendingConnect.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/quic/Socket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/quic/Stream.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/socket.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/thunk.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/udp.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/us_socket_t.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/uws_sys/vtable.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/valkey/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/valkey/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/valkey/valkey_protocol.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/watcher/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/watcher/INotifyWatcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/watcher/KEventWatcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/watcher/Watcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/watcher/WatcherTrace.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/watcher/WindowsWatcher.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/watcher/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/which/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/which/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/windows_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/windows_sys/externs.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/windows_sys/externs.zig",
+      "status": "M"
+    },
+    {
+      "path": "src/windows_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/workaround_missing_symbols.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/wyhash/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/wyhash/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/zlib/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/zlib/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/zlib_sys/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/zlib_sys/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/zlib_sys/posix.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/zlib_sys/shared.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/zlib_sys/win32.rs",
+      "status": "A"
+    },
+    {
+      "path": "src/zstd/Cargo.toml",
+      "status": "A"
+    },
+    {
+      "path": "src/zstd/lib.rs",
+      "status": "A"
+    },
+    {
+      "path": "test/bundler/bun-build-api.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/bundler/bun-build-compile.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/bundler/bundler_npm.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/cli/hot/hot.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/cli/install/__snapshots__/bun-audit.test.ts.snap",
+      "status": "M"
+    },
+    {
+      "path": "test/cli/install/bun-install.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/cli/run/transpiler-cache.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/internal/ban-words.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/ffi/ffi.test.fixture.callback.c",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/ffi/ffi.test.fixture.receiver.c",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/http/serve.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/jsonc/jsonc.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/resolve/toml/toml.test.js",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/spawn/spawn-stdin-pipe-fd-leak.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/spawn/spawn-stdin-readable-stream.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/spawn/spawn-unread-stdout-gc.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/spawn/spawn.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/test/concurrent.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/util/reportError.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/bun/yaml/yaml.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/node/fs/fs.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/node/net/net-mongodb-pattern-leak.test.ts",
+      "status": "A"
+    },
+    {
+      "path": "test/js/node/process/process.test.js",
+      "status": "M"
+    },
+    {
+      "path": "test/js/sql/sql.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/web/fetch/fetch-http3-client.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/js/web/fetch/fetch-leak.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/regression/issue/24364.test.ts",
+      "status": "M"
+    },
+    {
+      "path": "test/tsconfig.json",
+      "status": "M"
+    }
+  ]
+}

@@ -12,7 +12,6 @@ public struct PreparedTree<Node: Identifiable> {
     internal let parentByID: [Node.ID: Node.ID]
     internal let depthByID: [Node.ID: Int]
     internal let siblingIndexByID: [Node.ID: Int]
-    internal let siblingCountByID: [Node.ID: Int]
     internal let preorderIDs: [Node.ID]
 
     /// Creates a prepared tree while preserving root and sibling order.
@@ -24,7 +23,7 @@ public struct PreparedTree<Node: Identifiable> {
         children: (Node) -> [Node]
     ) throws {
         let rootsWithPositions = roots.enumerated().map { index, node in
-            (node: node, parentID: Optional<Node.ID>.none, depth: 0, siblingIndex: index, siblingCount: roots.count)
+            (node: node, parentID: Optional<Node.ID>.none, depth: 0, siblingIndex: index)
         }
 
         var stack = Array(rootsWithPositions.reversed())
@@ -34,7 +33,6 @@ public struct PreparedTree<Node: Identifiable> {
         var parentByID: [Node.ID: Node.ID] = [:]
         var depthByID: [Node.ID: Int] = [:]
         var siblingIndexByID: [Node.ID: Int] = [:]
-        var siblingCountByID: [Node.ID: Int] = [:]
         var preorderIDs: [Node.ID] = []
         preorderIDs.reserveCapacity(roots.count)
 
@@ -47,7 +45,6 @@ public struct PreparedTree<Node: Identifiable> {
             nodesByID[id] = pending.node
             depthByID[id] = pending.depth
             siblingIndexByID[id] = pending.siblingIndex
-            siblingCountByID[id] = pending.siblingCount
             preorderIDs.append(id)
 
             if let parentID = pending.parentID {
@@ -56,7 +53,9 @@ public struct PreparedTree<Node: Identifiable> {
 
             let childNodes = children(pending.node)
             let childIDs = childNodes.map(\.id)
-            childrenByID[id] = childIDs
+            if !childIDs.isEmpty {
+                childrenByID[id] = childIDs
+            }
 
             for (index, child) in childNodes.enumerated().reversed() {
                 stack.append(
@@ -64,8 +63,7 @@ public struct PreparedTree<Node: Identifiable> {
                         node: child,
                         parentID: id,
                         depth: pending.depth + 1,
-                        siblingIndex: index,
-                        siblingCount: childNodes.count
+                        siblingIndex: index
                     )
                 )
             }
@@ -81,7 +79,6 @@ public struct PreparedTree<Node: Identifiable> {
         self.parentByID = parentByID
         self.depthByID = depthByID
         self.siblingIndexByID = siblingIndexByID
-        self.siblingCountByID = siblingCountByID
         self.preorderIDs = preorderIDs
     }
 
@@ -120,6 +117,11 @@ public struct PreparedTree<Node: Identifiable> {
 
     /// Returns a node's zero-based hierarchy depth.
     public func depth(of id: Node.ID) -> Int? { depthByID[id] }
+
+    internal func siblingCount(of id: Node.ID) -> Int {
+        guard let parentID = parentByID[id] else { return rootIDs.count }
+        return childrenByID[parentID]?.count ?? 0
+    }
 
     /// Returns whether a node currently has children.
     public func isExpandable(_ id: Node.ID) -> Bool {

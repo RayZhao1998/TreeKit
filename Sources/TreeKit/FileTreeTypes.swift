@@ -41,6 +41,23 @@ public enum FileTreeInitialExpansion<ID: Hashable> {
 
 extension FileTreeInitialExpansion: Sendable where ID: Sendable {}
 
+/// Controls how an active, nonempty search query changes the visible projection.
+///
+/// Search never mutates the model's canonical selection or expansion sets. These modes only
+/// determine the effective expansion and filtering presented by ``visibleRows`` and the native
+/// renderers until the query is cleared or search is closed.
+public enum FileTreeSearchMode: CaseIterable, Equatable, Hashable, Sendable {
+    /// Preserves canonical expansion and additionally expands every matching branch and ancestor.
+    case expandMatches
+
+    /// Starts from a collapsed projection and expands only matching branches and their ancestors.
+    /// Nonmatching siblings along those branches remain visible.
+    case collapseNonMatches
+
+    /// Shows only matching nodes and the ancestor rows required to retain hierarchy context.
+    case hideNonMatches
+}
+
 /// The final alignment used by ``FileTreeModel/reveal(_:select:position:focus:)``.
 public enum FileTreeScrollPosition: Sendable {
     case nearest
@@ -67,6 +84,7 @@ public struct FileTreeRowContext<ID: Hashable> {
     public let isExpanded: Bool
     public let isSelected: Bool
     public let isFocused: Bool
+    public let isSearchMatch: Bool
 
     internal init(
         id: ID,
@@ -78,7 +96,8 @@ public struct FileTreeRowContext<ID: Hashable> {
         isExpandable: Bool,
         isExpanded: Bool,
         isSelected: Bool,
-        isFocused: Bool
+        isFocused: Bool,
+        isSearchMatch: Bool
     ) {
         self.id = id
         self.visibleIndex = visibleIndex
@@ -90,6 +109,7 @@ public struct FileTreeRowContext<ID: Hashable> {
         self.isExpanded = isExpanded
         self.isSelected = isSelected
         self.isFocused = isFocused
+        self.isSearchMatch = isSearchMatch
     }
 }
 

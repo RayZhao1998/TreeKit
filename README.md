@@ -29,6 +29,9 @@ library product to the target's dependencies.
 
 `Demo/` is a standalone macOS SwiftPM app that depends on the package through a local path. It
 shows a custom SwiftUI ``FileTree`` and the native AppKit ``FileTreeView`` using the same model.
+Its bundled fixture contains all 2,188 changed files from
+[`oven-sh/bun` PR #30412](https://diffshub.com/oven-sh/bun/pull/30412), including added,
+modified, deleted, and renamed paths.
 
 Build, stage, and launch it as a foreground app bundle from the repository root:
 
@@ -38,6 +41,8 @@ Build, stage, and launch it as a foreground app bundle from the repository root:
 
 Use `./script/build_and_run.sh --verify` to launch and confirm the process. The included
 `.codex/environments/environment.toml` exposes the same command as the Codex Run action.
+The reproducible stress workload and measured CPU, memory, and effective update-rate baseline
+are documented in [`Docs/Performance.md`](Docs/Performance.md).
 
 ## Path-first input
 
@@ -80,6 +85,12 @@ struct ProjectSidebar: View {
     }
 }
 ```
+
+The native tree subscribes to the model directly. When a SwiftUI container owns the model but
+does not render any of its published values, keep the reference in `@State` instead of observing
+it from that whole container. Put counters, selection details, and other model-driven UI in small
+`@ObservedObject` leaf views. This prevents a selection or reveal from needlessly updating the
+entire surrounding layout and reconfiguring every mounted custom row.
 
 Supply a row builder to replace only the row content. TreeKit still owns disclosure geometry,
 indentation, selection hit testing, keyboard behavior, and reuse:
@@ -172,21 +183,67 @@ model.reset(nextPreparedTree)
 Selection and expansion survive `reset` for retained identities by default. Removed identities
 are pruned atomically before the mounted renderer observes the new data.
 
+## Model-backed search
+
+Search is shared `FileTreeModel` state, so SwiftUI, AppKit, and UIKit always render the same
+projection. Queries are trimmed, normalized to `/` separators, and matched case-insensitively
+against canonical paths for `FileTreePath` models:
+
+```swift
+model.openSearch(initialQuery: "sources\\treekit")
+
+model.searchQuery       // "sources/treekit"
+model.matchingIDs       // stable IDs in prepared preorder
+model.isSearchOpen      // true
+
+model.focusNextSearchMatch()
+model.focusPreviousSearchMatch()
+model.setSearchQuery("filetreeview")
+model.closeSearch()
+```
+
+`FileTreeSearchMode` controls only the effective visible projection. Canonical selection and
+expansion remain identity-based and are not rewritten when a query changes:
+
+- `.expandMatches` preserves current expansion and additionally expands every match path.
+- `.collapseNonMatches` starts from a collapsed projection and expands match paths, retaining
+  nonmatching siblings as context.
+- `.hideNonMatches`—the default—shows only matches and the ancestors required to preserve their
+  hierarchy.
+
+An open search with an empty query renders the normal expansion projection. In
+`.hideNonMatches`, a nonempty query with no matches renders an empty tree. Custom rows can use
+`context.isSearchMatch` for highlighting without recomputing the match.
+
+For arbitrary node types, provide the searchable text once when the model is created:
+
+```swift
+let model = FileTreeModel(
+    prepared,
+    searchText: { $0.title }
+)
+```
+
 ## Performance contract
 
 - `PreparedTree` indexes nodes, parents, ordered children, depth, and siblings in O(n) time and
-  memory.
+  memory. It stores child arrays only for branches and derives sibling counts instead of retaining
+  a redundant per-node index.
 - Identity lookup and direct selection changes use hash indexes.
 - Expanding or collapsing computes only the affected subtree, mutates one contiguous range, and
   refreshes shifted identity indexes. Complete resets and expansion-set replacements rebuild the
-  visible projection once.
+  visible projection once. Revealing a path expands all missing ancestors and inserts the newly
+  visible branch in one projection update instead of rebuilding every visible row.
 - AppKit and UIKit render only native mounted cells. SwiftUI custom content is hosted inside
   those reused cells rather than recursively constructing the entire tree.
 - Row height is fixed by `FileTreeConfiguration`, avoiding whole-tree measurement during scroll.
+- Search caches normalized node text once, preserves deterministic prepared preorder, and rebuilds
+  only the shared visible projection when its query or mode changes.
 
-The package intentionally does not enumerate the filesystem, watch directories, persist state,
-or fetch lazy children. Those responsibilities stay with the caller; TreeKit renders an already
-known hierarchy and can replace it through `reset`.
+The package intentionally does not enumerate the filesystem, watch directories, or persist
+state. The current 1.x model renders an already known hierarchy and can replace it through
+`reset`. A compatible lazy-child design for much larger trees is described in
+[`Docs/LazyLoading.md`](Docs/LazyLoading.md); it is a roadmap, not a currently shipped API.
 
 ## Design references
 

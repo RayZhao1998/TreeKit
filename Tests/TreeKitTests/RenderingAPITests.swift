@@ -71,6 +71,59 @@ struct RenderingAPITests {
         _ = view
     }
 
+    @Test
+    func appKitRendersTheSharedSearchProjection() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Folder/Target.swift",
+                "Root/Other.swift",
+                "Outside.swift"
+            ],
+            options: .init(sort: .inputOrder)
+        )
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+
+        #expect(outlineView.numberOfRows == 2)
+
+        model.openSearch(initialQuery: "target")
+        #expect(model.visibleRows.map(\.id) == ["Root/", "Root/Folder/", "Root/Folder/Target.swift"])
+        #expect(outlineView.numberOfRows == 3)
+
+        model.setSearchQuery("missing")
+        #expect(model.visibleRows.isEmpty)
+        #expect(outlineView.numberOfRows == 0)
+
+        model.closeSearch()
+        #expect(outlineView.numberOfRows == 2)
+    }
+
+    @Test
+    func appKitRestoresAForcedSearchExpansionAfterNativeCollapse() async throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["Root/Folder/Target.swift"],
+            options: .init(sort: .inputOrder)
+        )
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+
+        model.openSearch(initialQuery: "target")
+        #expect(model.expandedIDs.isEmpty)
+        #expect(outlineView.numberOfRows == 3)
+
+        let forcedRoot = try #require(outlineView.item(atRow: 0))
+        outlineView.collapseItem(forcedRoot)
+
+        // The renderer waits for NSOutlineView's native collapse transaction to finish before
+        // replaying the model's forced search expansion.
+        await Task.yield()
+
+        #expect(model.expandedIDs.isEmpty)
+        #expect(model.visibleRows.map(\.id) == ["Root/", "Root/Folder/", "Root/Folder/Target.swift"])
+        #expect(outlineView.numberOfRows == 3)
+        #expect(outlineView.isItemExpanded(forcedRoot))
+    }
+
     private func findOutlineView(in view: NSView) -> NSOutlineView? {
         if let outlineView = view as? NSOutlineView {
             return outlineView

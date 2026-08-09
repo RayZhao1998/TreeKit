@@ -31,6 +31,9 @@ struct PreparedTreeTests {
         #expect(tree.parentID(of: "App.swift") == "Sources")
         #expect(tree.depth(of: "Model.swift") == 2)
         #expect(tree.ancestorIDs(of: "Model.swift") == ["root", "Sources"])
+        #expect(tree.siblingCount(of: "root") == 1)
+        #expect(tree.siblingCount(of: "Sources") == 2)
+        #expect(tree.siblingCount(of: "App.swift") == 2)
         #expect(tree.isExpandable("Sources"))
         #expect(!tree.isExpandable("README.md"))
     }
@@ -53,6 +56,201 @@ struct PreparedTreeTests {
 
 @MainActor
 struct FileTreeModelTests {
+    private func makeSearchTree() throws -> PreparedTree<TestNode> {
+        try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "Sources/",
+                    children: [
+                        TestNode(id: "Sources/App.swift"),
+                        TestNode(
+                            id: "Sources/Support/",
+                            children: [TestNode(id: "Sources/Support/Logger.swift")]
+                        )
+                    ]
+                ),
+                TestNode(
+                    id: "Tests/",
+                    children: [TestNode(id: "Tests/AppTests.swift")]
+                ),
+                TestNode(id: "README.md")
+            ],
+            children: \.children
+        )
+    }
+
+    @Test
+    func searchFiltersMatchesWithAncestorContextWithoutMutatingIdentityState() throws {
+        let model = FileTreeModel(
+            try makeSearchTree(),
+            initialExpansion: .identifiers(["Sources/"]),
+            initialSelection: ["README.md"]
+        )
+
+        model.openSearch(initialQuery: " APP ")
+
+        #expect(model.isSearchOpen)
+        #expect(model.searchQuery == "app")
+        #expect(model.matchingIDs == ["Sources/App.swift", "Tests/AppTests.swift"])
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["Sources/", "Sources/App.swift", "Tests/", "Tests/AppTests.swift"]
+        )
+        #expect(model.selection == ["README.md"])
+        #expect(model.expandedIDs == ["Sources/"])
+        #expect(model.focusedID == "Sources/App.swift")
+
+        let stableSearchRevision = model.revision
+        model.setSearchQuery("app")
+        #expect(model.revision == stableSearchRevision)
+
+        model.closeSearch()
+
+        #expect(!model.isSearchOpen)
+        #expect(model.searchQuery.isEmpty)
+        #expect(model.matchingIDs.isEmpty)
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "Sources/",
+                    "Sources/App.swift",
+                    "Sources/Support/",
+                    "Tests/",
+                    "README.md"
+                ]
+        )
+        #expect(model.selection == ["README.md"])
+        #expect(model.expandedIDs == ["Sources/"])
+        #expect(model.focusedID == "Sources/App.swift")
+    }
+
+    @Test
+    func searchProjectionModesHaveDocumentedDeterministicShapes() throws {
+        let model = FileTreeModel(
+            try makeSearchTree(),
+            initialExpansion: .identifiers(["Tests/"])
+        )
+
+        model.setSearchMode(.expandMatches)
+        model.openSearch(initialQuery: "logger")
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "Sources/",
+                    "Sources/App.swift",
+                    "Sources/Support/",
+                    "Sources/Support/Logger.swift",
+                    "Tests/",
+                    "Tests/AppTests.swift",
+                    "README.md"
+                ]
+        )
+
+        model.setSearchMode(.collapseNonMatches)
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "Sources/",
+                    "Sources/App.swift",
+                    "Sources/Support/",
+                    "Sources/Support/Logger.swift",
+                    "Tests/",
+                    "README.md"
+                ]
+        )
+
+        model.setSearchMode(.hideNonMatches)
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["Sources/", "Sources/Support/", "Sources/Support/Logger.swift"]
+        )
+        #expect(model.expandedIDs == ["Tests/"])
+    }
+
+    @Test
+    func broadSearchReusesPreviouslyCollectedAncestorPaths() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "match-root",
+                    children: [
+                        TestNode(
+                            id: "match-parent",
+                            children: [
+                                TestNode(id: "match-first"),
+                                TestNode(id: "match-second")
+                            ]
+                        )
+                    ]
+                )
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(tree)
+
+        model.openSearch(initialQuery: "match")
+
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["match-root", "match-parent", "match-first", "match-second"]
+        )
+        #expect(model.renderedExpandedIDs == ["match-root", "match-parent"])
+    }
+
+    @Test
+    func searchMatchNavigationClampsInVisiblePreorder() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(id: "A.swift"),
+                TestNode(id: "B.swift"),
+                TestNode(id: "C.txt"),
+                TestNode(id: "D.swift")
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(tree, initialSelection: ["C.txt"])
+
+        model.openSearch(initialQuery: "swift")
+        #expect(model.focusedID == "A.swift")
+
+        model.focusNextSearchMatch()
+        #expect(model.focusedID == "B.swift")
+        model.focusNextSearchMatch()
+        #expect(model.focusedID == "D.swift")
+        model.focusNextSearchMatch()
+        #expect(model.focusedID == "D.swift")
+        model.focusPreviousSearchMatch()
+        #expect(model.focusedID == "B.swift")
+        #expect(model.selection == ["C.txt"])
+    }
+
+    @Test
+    func clearingSearchRestoresProjectionAndEmptyResultsRemainEmpty() throws {
+        let model = FileTreeModel(
+            try makeSearchTree(),
+            initialExpansion: .identifiers(["Sources/"])
+        )
+
+        model.openSearch(initialQuery: "does-not-exist")
+        #expect(model.isSearchOpen)
+        #expect(model.matchingIDs.isEmpty)
+        #expect(model.visibleRows.isEmpty)
+
+        model.setSearchQuery("  ")
+        #expect(model.isSearchOpen)
+        #expect(model.searchQuery.isEmpty)
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "Sources/",
+                    "Sources/App.swift",
+                    "Sources/Support/",
+                    "Tests/",
+                    "README.md"
+                ]
+        )
+    }
+
     @Test
     func expansionUpdatesOnlyTheAffectedVisibleProjection() throws {
         let input = TestNode(
@@ -143,6 +341,51 @@ struct FileTreeModelTests {
         #expect(model.selection == ["file"])
         #expect(model.focusedID == "file")
         #expect(model.visibleRows.map(\.id) == ["root", "folder", "file"])
+    }
+
+    @Test
+    func revealSplicesTheFirstNewAncestorSubtreeAndPreservesHiddenExpansion() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "root",
+                    children: [
+                        TestNode(
+                            id: "first",
+                            children: [
+                                TestNode(
+                                    id: "nested",
+                                    children: [TestNode(id: "target")]
+                                )
+                            ]
+                        ),
+                        TestNode(
+                            id: "second",
+                            children: [TestNode(id: "sibling")]
+                        )
+                    ]
+                )
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(tree)
+
+        // A hidden branch can be expanded before any of its ancestors become visible.
+        model.expand("nested")
+        #expect(model.visibleRows.map(\.id) == ["root"])
+
+        model.reveal("target")
+        #expect(model.expandedIDs == ["root", "first", "nested"])
+        #expect(model.visibleRows.map(\.id) == ["root", "first", "nested", "target", "second"])
+
+        // Revealing another branch inserts only its newly visible descendants while retaining
+        // the already materialized prefix and preorder.
+        model.reveal("sibling")
+        #expect(model.expandedIDs == ["root", "first", "nested", "second"])
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["root", "first", "nested", "target", "second", "sibling"]
+        )
     }
 
     @Test
