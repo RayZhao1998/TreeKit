@@ -426,7 +426,22 @@ private extension FileTreeView {
                 let owner,
                 let box = notification.userInfo?["NSObject"] as? ItemBox
             else { return }
+
+            let isForcedSearchExpansion = owner.model.isRenderedExpanded(box.id)
+                && !owner.model.expandedIDs.contains(box.id)
             owner.model.collapse(box.id)
+
+            // Search projections can force a canonically collapsed ancestor open. Native
+            // disclosure clicks still collapse NSOutlineView directly, so replay the model's
+            // rendered expansion when the canonical collapse above intentionally changed nothing.
+            // Defer until AppKit has finished its native collapse transaction; expanding from
+            // inside the did-collapse notification violates NSOutlineView's internal state.
+            if isForcedSearchExpansion {
+                appliedExpansionRevision = nil
+                Task { @MainActor [weak self] in
+                    self?.synchronize()
+                }
+            }
         }
 
         @objc func didDoubleClick(_ sender: NSOutlineView) {

@@ -168,6 +168,36 @@ struct FileTreeModelTests {
     }
 
     @Test
+    func broadSearchReusesPreviouslyCollectedAncestorPaths() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "match-root",
+                    children: [
+                        TestNode(
+                            id: "match-parent",
+                            children: [
+                                TestNode(id: "match-first"),
+                                TestNode(id: "match-second")
+                            ]
+                        )
+                    ]
+                )
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(tree)
+
+        model.openSearch(initialQuery: "match")
+
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["match-root", "match-parent", "match-first", "match-second"]
+        )
+        #expect(model.renderedExpandedIDs == ["match-root", "match-parent"])
+    }
+
+    @Test
     func searchMatchNavigationClampsInVisiblePreorder() throws {
         let tree = try PreparedTree(
             roots: [

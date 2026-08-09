@@ -505,16 +505,26 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         }
 
         var requiredExpandedIDs: Set<Node.ID> = []
-        var contextualVisibleIDs = matchingIDSet
+        var contextualVisibleIDs: Set<Node.ID> = []
+        requiredExpandedIDs.reserveCapacity(matchingIDs.count)
+        contextualVisibleIDs.reserveCapacity(matchingIDs.count)
+
         for matchingID in matchingIDs {
+            contextualVisibleIDs.insert(matchingID)
             if preparedTree.isExpandable(matchingID) {
                 requiredExpandedIDs.insert(matchingID)
             }
-            for ancestorID in preparedTree.ancestorIDs(of: matchingID) {
-                contextualVisibleIDs.insert(ancestorID)
-                if preparedTree.isExpandable(ancestorID) {
-                    requiredExpandedIDs.insert(ancestorID)
+
+            var ancestorID = preparedTree.parentByID[matchingID]
+            while let currentAncestorID = ancestorID {
+                let inserted = contextualVisibleIDs.insert(currentAncestorID).inserted
+                if preparedTree.isExpandable(currentAncestorID) {
+                    requiredExpandedIDs.insert(currentAncestorID)
                 }
+                // Matches are visited in preorder. An ancestor already collected here was
+                // therefore processed earlier together with the rest of its path to the root.
+                guard inserted else { break }
+                ancestorID = preparedTree.parentByID[currentAncestorID]
             }
         }
 
