@@ -273,6 +273,7 @@ public extension FileTreeModel where Node == FileTreePath {
             nextState = try Self.reordered(
                 state: nextState,
                 preparedTree: nextPreparedTree,
+                originalPreparedTree: preparedTree,
                 plan: reorderPlan
             )
             nextPreparedTree = try Self.prepare(state: nextState)
@@ -389,11 +390,32 @@ public extension FileTreeModel where Node == FileTreePath {
     private static func reordered(
         state: FileTreePathMutationState,
         preparedTree: PreparedTree<FileTreePath>,
+        originalPreparedTree: PreparedTree<FileTreePath>,
         plan: FileTreeDropReorderPlan
     ) throws -> FileTreePathMutationState {
-        var siblings = plan.destinationParentID.flatMap {
-            preparedTree.childrenByID[$0]
-        } ?? preparedTree.rootIDs
+        func mappedID(_ id: String) -> String {
+            plan.moves.reduce(id) { result, move in
+                moving(result, from: move.sourcePath, to: move.destinationPath)
+            }
+        }
+
+        var roots = originalPreparedTree.rootIDs.map(mappedID).filter {
+            preparedTree.contains($0) && preparedTree.parentByID[$0] == nil
+        }
+        var childrenByID: [String: [String]] = [:]
+        childrenByID.reserveCapacity(originalPreparedTree.childrenByID.count)
+        for originalParentID in originalPreparedTree.preorderIDs {
+            let parentID = mappedID(originalParentID)
+            guard preparedTree.contains(parentID) else { continue }
+            let children = (originalPreparedTree.childrenByID[originalParentID] ?? [])
+                .map(mappedID)
+                .filter {
+                    preparedTree.contains($0) && preparedTree.parentByID[$0] == parentID
+                }
+            childrenByID[parentID] = children
+        }
+
+        var siblings = plan.destinationParentID.flatMap { childrenByID[$0] } ?? roots
         let movedSet = Set(plan.movedDestinationIDs)
         let movedIDs = plan.movedDestinationIDs.filter(preparedTree.contains)
         siblings.removeAll(where: movedSet.contains)
@@ -414,16 +436,18 @@ public extension FileTreeModel where Node == FileTreePath {
             insertionIndex = siblings.index(after: index)
         }
         siblings.insert(contentsOf: movedIDs, at: insertionIndex)
+        if let destinationParentID = plan.destinationParentID {
+            childrenByID[destinationParentID] = siblings
+        } else {
+            roots = siblings
+        }
 
         var preorder: [String] = []
         preorder.reserveCapacity(preparedTree.count)
-        let roots = plan.destinationParentID == nil ? siblings : preparedTree.rootIDs
         var stack = Array(roots.reversed())
         while let id = stack.popLast() {
             preorder.append(id)
-            let children = id == plan.destinationParentID
-                ? siblings
-                : (preparedTree.childrenByID[id] ?? [])
+            let children = childrenByID[id] ?? (preparedTree.childrenByID[id] ?? [])
             stack.append(contentsOf: children.reversed())
         }
         let rank = Dictionary(uniqueKeysWithValues: preorder.enumerated().map { ($1, $0) })

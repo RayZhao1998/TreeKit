@@ -65,6 +65,10 @@ struct FileTreeDragDropTests {
 
         #expect(model.preparedTree.contains("Target/One.swift"))
         #expect(!model.preparedTree.contains("Source/One.swift"))
+        #expect(model.preparedTree.rootIDs == ["Source/", "Target/"])
+        #expect(model.preparedTree.childrenByID["Target/"] == [
+            "Target/Existing.swift", "Target/One.swift"
+        ])
         #expect(model.selection == ["Target/One.swift"])
         #expect(!model.expandedIDs.contains("Target/"))
         #expect(event.proposal.target.destinationDirectoryPath == "Target/")

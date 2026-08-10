@@ -29,6 +29,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
     public var model: FileTreeModel<Node> {
         didSet {
             guard oldValue !== model else { return }
+            cancelDropHoverExpansion()
             oldValue.cancelActiveRename()
             observedModelIdentifier = nil
             observedRenamingID = nil

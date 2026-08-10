@@ -181,7 +181,9 @@ internal struct FileTreeDropReorderPlan {
     let destinationParentID: String?
     let referenceID: String?
     let position: FileTreeDropPosition
-    let movedDestinationIDs: [String]
+    let moves: [FileTreeDropMove]
+
+    var movedDestinationIDs: [String] { moves.map(\.destinationPath.id) }
 }
 
 @MainActor
@@ -260,7 +262,7 @@ public extension FileTreeModel where Node == FileTreePath {
                 destinationParentID: target.destinationDirectoryPath,
                 referenceID: referenceID,
                 position: target.position,
-                movedDestinationIDs: moves.map(\.destinationPath.id)
+                moves: moves
             )
             do {
                 try applyDrop(moves: moves, reorderPlan: plan)
