@@ -306,6 +306,32 @@ struct FileTreePathModelTests {
     }
 
     @Test
+    func closingSearchNormalizesAHiddenFlattenedBranch() throws {
+        let prepared = try prepareFileTree(
+            paths: [
+                "Root/Branch/Chain/Leaf/File.swift",
+                "Root/Sibling.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+        let model = FileTreeModel(prepared, searchText: \.name)
+
+        model.openSearch(initialQuery: "branch")
+        #expect(model.focusedID == "Root/Branch/")
+        model.select("Root/Branch/")
+        #expect(model.selection == ["Root/Branch/"])
+
+        model.closeSearch()
+
+        #expect(model.visibleRow(for: "Root/Branch/") == nil)
+        #expect(model.selection == ["Root/Branch/Chain/Leaf/"])
+        #expect(model.focusedID == "Root/Branch/Chain/Leaf/")
+
+        model.expand("Root/")
+        #expect(model.visibleRow(for: "Root/Branch/")?.id == "Root/Branch/Chain/Leaf/")
+    }
+
+    @Test
     func preparedPathInputRetainsFlatteningProjectionOptions() throws {
         let prepared = try prepareFileTree(
             paths: ["Root/Branch/Leaf/File.swift"],

@@ -891,6 +891,11 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     private func normalizeSearchInteractionIfNeeded(
         remappingPreviouslyVisibleSelection previouslyVisibleSelection: Set<Node.ID> = []
     ) {
+        if !hasActiveSearchQuery {
+            selection = Set(selection.map { interactionID(for: $0) })
+            focusedID = focusedID.map { interactionID(for: $0) }
+            return
+        }
         selection = Set(selection.map { selectedID in
             if let row = visibleRow(for: selectedID) { return row.id }
             guard previouslyVisibleSelection.contains(selectedID) else { return selectedID }
@@ -901,7 +906,6 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         if let focusedID, let row = visibleRow(for: focusedID) {
             self.focusedID = row.id
         }
-        guard hasActiveSearchQuery else { return }
         let visibleMatchIDs = visibleSearchMatchIDs()
         guard !visibleMatchIDs.isEmpty else { return }
         if let focusedID, let row = visibleRow(for: focusedID),
