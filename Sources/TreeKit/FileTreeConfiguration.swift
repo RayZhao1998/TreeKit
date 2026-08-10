@@ -54,6 +54,7 @@ public struct FileTreeConfiguration: Equatable, Sendable {
     public var allowsEmptySelection: Bool
     public var expandsBranchesOnDoubleClick: Bool
     public var showsSeparators: Bool
+    public var icons: FileTreeIcons
 
     public init(
         appearance: FileTreeAppearance = .sourceList,
@@ -63,7 +64,8 @@ public struct FileTreeConfiguration: Equatable, Sendable {
         selectionMode: FileTreeSelectionMode = .multiple,
         allowsEmptySelection: Bool = true,
         expandsBranchesOnDoubleClick: Bool = true,
-        showsSeparators: Bool = false
+        showsSeparators: Bool = false,
+        icons: FileTreeIcons = .complete
     ) {
         self.appearance = appearance
         self.rowHeight = max(1, rowHeight)
@@ -73,5 +75,6 @@ public struct FileTreeConfiguration: Equatable, Sendable {
         self.allowsEmptySelection = allowsEmptySelection
         self.expandsBranchesOnDoubleClick = expandsBranchesOnDoubleClick
         self.showsSeparators = showsSeparators
+        self.icons = icons
     }
 }

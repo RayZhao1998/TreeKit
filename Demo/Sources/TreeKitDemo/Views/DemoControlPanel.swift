@@ -84,6 +84,19 @@ struct DemoControlPanel: View {
           .toggleStyle(.switch)
         }
 
+        HStack(spacing: 14) {
+          Picker("Icon set", selection: configurationBinding(\.icons.set)) {
+            ForEach(FileTreeBuiltInIconSet.allCases, id: \.self) { iconSet in
+              Text(iconSet.demoTitle).tag(iconSet)
+            }
+          }
+          .pickerStyle(.menu)
+
+          Toggle("Colored icons", isOn: configurationBinding(\.icons.colored))
+            .toggleStyle(.switch)
+            .disabled(configuration.icons.set != .complete)
+        }
+
         Toggle(
           "Flatten empty directory chains",
           isOn: Binding(
@@ -456,6 +469,17 @@ struct DemoControlPanel: View {
       try action()
     } catch {
       eventObserver.record("Error · \(error.localizedDescription)")
+    }
+  }
+}
+
+private extension FileTreeBuiltInIconSet {
+  var demoTitle: String {
+    switch self {
+    case .minimal: "Minimal"
+    case .standard: "Standard"
+    case .complete: "Complete"
+    case .none: "None"
     }
   }
 }
