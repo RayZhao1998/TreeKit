@@ -126,9 +126,23 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         bindToModel()
     }
 
+    deinit {
+        let model = model
+        Task { @MainActor in
+            model.cancelActiveRename()
+        }
+    }
+
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("FileTreeView does not support initialization from a coder")
+    }
+
+    public override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            model.cancelActiveRename()
+        }
     }
 
     /// Reloads mounted row content after caller-owned decoration data changes.
