@@ -588,6 +588,10 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             let fallbackRenderedID = target.path.flatMap {
                 pathModel.visibleRow(for: $0.id)?.id
             }
+            let hiddenDestinationTarget = UIDragPreviewTarget(
+                container: collectionView,
+                center: coordinator.session.location(in: collectionView)
+            )
             for (offset, item) in coordinator.items.enumerated() {
                 let destinationID = event.moves.indices.contains(offset)
                     ? event.moves[offset].destinationPath.id
@@ -599,7 +603,10 @@ public final class FileTreeView<Node: Identifiable>: UIView,
                       let finalIndex = pathModel.visibleRows.firstIndex(where: {
                           $0.id == renderedID
                       })
-                else { continue }
+                else {
+                    coordinator.drop(item.dragItem, to: hiddenDestinationTarget)
+                    continue
+                }
                 coordinator.drop(
                     item.dragItem,
                     toItemAt: IndexPath(item: finalIndex, section: 0)
