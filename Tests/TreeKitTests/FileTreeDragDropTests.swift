@@ -77,6 +77,26 @@ struct FileTreeDragDropTests {
     }
 
     @Test
+    func flattenedBeforeTargetUsesItsRenderedParent() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["src/lib/core/File.swift", "Other.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true),
+            initialSelection: ["Other.swift"]
+        )
+        #expect(model.visibleRows.map(\.id) == ["src/lib/core/", "Other.swift"])
+
+        let target = try #require(
+            model.renderedDropTarget(for: "src/lib/core/", position: .before)
+        )
+        #expect(target.path?.id == "src/")
+        #expect(target.destinationDirectoryPath == nil)
+
+        let session = try model.makeDragSession(startingAt: "Other.swift")
+        try model.performDrop(session, target: target)
+        #expect(model.preparedTree.rootIDs == ["Other.swift", "src/"])
+    }
+
+    @Test
     func rejectsSelfCyclesDescendantsAndDuplicateDestinations() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: [

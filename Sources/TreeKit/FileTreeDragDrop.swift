@@ -276,6 +276,19 @@ public extension FileTreeModel where Node == FileTreePath {
         (fileTreeDragDropConfiguration ?? .init()).openOnDropDelay
     }
 
+    /// Resolves a native rendered row back to the canonical target that owns its placement.
+    /// Flattened rows use their first represented segment for before/after and their terminal
+    /// segment for inside.
+    internal func renderedDropTarget(
+        for id: String,
+        position: FileTreeDropPosition
+    ) -> FileTreeDropTarget? {
+        guard let row = visibleRow(for: id) else { return nil }
+        let targetID = position == .inside ? row.id : (row.representedIDs.first ?? row.id)
+        guard let path = preparedTree.node(for: targetID) else { return nil }
+        return FileTreeDropTarget(path: path, position: position)
+    }
+
     private func resolveDropProposal(
         session: FileTreeDragSession,
         target: FileTreeDropTarget,

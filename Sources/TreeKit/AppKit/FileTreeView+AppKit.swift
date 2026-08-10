@@ -693,7 +693,7 @@ private extension FileTreeView {
                 .flatMap { model.preparedTree.node(for: $0) }
             if index == NSOutlineViewDropOnItemIndex {
                 guard let parentPath else { return .init(path: nil, position: .inside) }
-                return .init(path: parentPath, position: .inside)
+                return model.renderedDropTarget(for: parentPath.id, position: .inside)
             }
 
             let childIDs: [String]
@@ -704,14 +704,14 @@ private extension FileTreeView {
             }
             if childIDs.indices.contains(index),
                let child = model.preparedTree.node(for: childIDs[index]) {
-                return .init(path: child, position: .before)
+                return model.renderedDropTarget(for: child.id, position: .before)
             }
             if let lastID = childIDs.last,
                let last = model.preparedTree.node(for: lastID) {
-                return .init(path: last, position: .after)
+                return model.renderedDropTarget(for: last.id, position: .after)
             }
             if let parentPath {
-                return .init(path: parentPath, position: .inside)
+                return model.renderedDropTarget(for: parentPath.id, position: .inside)
             }
             return .init(path: nil, position: .inside)
         }
@@ -734,9 +734,14 @@ private extension FileTreeView {
             let delay = model.dragDropOpenDelay
             hoverExpansionTask = Task { @MainActor [weak self, weak model] in
                 if delay > 0 {
-                    try? await Task.sleep(for: .seconds(delay))
+                    do {
+                        try await Task.sleep(for: .seconds(delay))
+                    } catch {
+                        return
+                    }
                 }
-                guard let self, self.hoveredDropPath == path.id, let model else { return }
+                guard !Task.isCancelled,
+                      let self, self.hoveredDropPath == path.id, let model else { return }
                 model.expand(path.id)
             }
         }

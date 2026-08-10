@@ -617,9 +617,12 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             ?? .zero
         let relativeY = frame.height > 0 ? (location.y - frame.minY) / frame.height : 0.5
         if path.kind == .directory, relativeY >= 0.25, relativeY <= 0.75 {
-            return .init(path: path, position: .inside)
+            return model.renderedDropTarget(for: path.id, position: .inside)
         }
-        return .init(path: path, position: relativeY < 0.5 ? .before : .after)
+        return model.renderedDropTarget(
+            for: path.id,
+            position: relativeY < 0.5 ? .before : .after
+        )
     }
 
     private func scheduleDropHoverExpansion(
@@ -640,9 +643,14 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         let delay = model.dragDropOpenDelay
         hoverExpansionTask = Task { @MainActor [weak self, weak model] in
             if delay > 0 {
-                try? await Task.sleep(for: .seconds(delay))
+                do {
+                    try await Task.sleep(for: .seconds(delay))
+                } catch {
+                    return
+                }
             }
-            guard let self, self.hoveredDropPath == path.id, let model else { return }
+            guard !Task.isCancelled,
+                  let self, self.hoveredDropPath == path.id, let model else { return }
             model.expand(path.id)
         }
     }
