@@ -100,6 +100,32 @@ struct RenderingAPITests {
     }
 
     @Test
+    func appKitRendersAndTogglesTheSharedFlattenedProjection() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Branch/Leaf/First.swift",
+                "Root/Branch/Leaf/Second.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true),
+            initialExpansion: .identifiers(["Root/Branch/Leaf/"])
+        )
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+
+        #expect(outlineView.numberOfRows == 3)
+        #expect(model.visibleRows[0].representedIDs == [
+            "Root/", "Root/Branch/", "Root/Branch/Leaf/"
+        ])
+
+        model.setFlattenEmptyDirectories(false)
+        #expect(outlineView.numberOfRows == 1)
+
+        model.expand("Root/")
+        model.expand("Root/Branch/")
+        #expect(outlineView.numberOfRows == 5)
+    }
+
+    @Test
     func appKitRestoresAForcedSearchExpansionAfterNativeCollapse() async throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Root/Folder/Target.swift"],

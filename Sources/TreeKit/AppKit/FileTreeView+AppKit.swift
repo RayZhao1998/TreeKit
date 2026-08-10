@@ -194,10 +194,10 @@ public extension FileTreeView where Node == FileTreePath {
         model: FileTreeModel<FileTreePath>,
         configuration: FileTreeConfiguration = .init()
     ) {
-        self.init(model: model, configuration: configuration) { node, _, reusableView in
+        self.init(model: model, configuration: configuration) { node, context, reusableView in
             let row = (reusableView as? AppKitDefaultFileTreeRowView)
                 ?? AppKitDefaultFileTreeRowView()
-            row.update(with: node)
+            row.update(with: node, segments: context.segments)
             return row
         }
     }
@@ -489,7 +489,15 @@ private extension FileTreeView {
                 isExpanded: owner.model.isRenderedExpanded(id),
                 isSelected: owner.model.selection.contains(id),
                 isFocused: owner.model.focusedID == id,
-                isSearchMatch: owner.model.isSearchMatch(id)
+                isSearchMatch: owner.model.isSearchMatch(id),
+                segments: projectedRow?.segments ?? [
+                    FileTreeRowSegment(
+                        id: id,
+                        label: (tree.nodesByID[id] as? FileTreePath)?.name
+                            ?? String(describing: id),
+                        isTerminal: true
+                    )
+                ]
             )
         }
 
@@ -667,8 +675,11 @@ private final class AppKitDefaultFileTreeRowView: NSView {
         fatalError("Use init(frame:)")
     }
 
-    func update(with node: FileTreePath) {
-        nameField.stringValue = node.name
+    func update(
+        with node: FileTreePath,
+        segments: [FileTreeRowSegment<String>]
+    ) {
+        nameField.stringValue = segments.map(\.label).joined(separator: " / ")
         iconView.image = NSImage(
             systemSymbolName: node.kind == .directory ? "folder" : "doc",
             accessibilityDescription: node.kind == .directory ? "Folder" : "File"

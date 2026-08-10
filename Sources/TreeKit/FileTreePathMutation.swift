@@ -113,6 +113,22 @@ internal struct FileTreePathMutationState {
 
 @MainActor
 public extension FileTreeModel where Node == FileTreePath {
+    /// Whether single-child directory chains are combined in the visible projection.
+    var flattenEmptyDirectories: Bool { pathFlattenEmptyDirectories }
+
+    /// Enables or disables compact directory rows without rebuilding canonical topology.
+    ///
+    /// Existing selection, focus, and expansion are retained by canonical identity. When an
+    /// identity becomes part of a flattened row, interaction resolves to that row's terminal
+    /// directory, matching `@pierre/trees` semantics.
+    func setFlattenEmptyDirectories(_ enabled: Bool) {
+        var state = fileTreePathMutationState
+            ?? FileTreePathMutationState(preparedTree: preparedTree)
+        state.options.flattenEmptyDirectories = enabled
+        fileTreePathMutationState = state
+        setPathFlattenEmptyDirectories(enabled, publishing: true)
+    }
+
     /// A typed stream of successful path-first mutation transactions.
     var mutationEvents: AnyPublisher<FileTreePathMutationEvent, Never> {
         pathMutationSubject().eraseToAnyPublisher()
@@ -180,6 +196,7 @@ public extension FileTreeModel where Node == FileTreePath {
         let nextFocus = focusedID
 
         fileTreePathMutationState = nextState
+        pathFlattenEmptyDirectories = nextOptions.flattenEmptyDirectories
         replacePreparedTree(
             nextPreparedTree,
             expandedIDs: nextExpansion,

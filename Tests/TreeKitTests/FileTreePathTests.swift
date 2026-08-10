@@ -112,6 +112,126 @@ struct FileTreePathTests {
 @MainActor
 struct FileTreePathModelTests {
     @Test
+    func flattensDirectoryChainsIntoTerminalIdentityRows() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "src/lib/core/First.swift",
+                "src/lib/core/Second.swift",
+                "Assets/Icon.png",
+                "README.md"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+
+        #expect(model.preparedTree.count == 8)
+        #expect(model.visibleRows.map(\.id) == ["src/lib/core/", "Assets/", "README.md"])
+
+        let flattenedRow = try #require(model.visibleRows.first)
+        #expect(flattenedRow.isFlattened)
+        #expect(flattenedRow.depth == 0)
+        #expect(flattenedRow.parentID == nil)
+        #expect(flattenedRow.representedIDs == ["src/", "src/lib/", "src/lib/core/"])
+        #expect(flattenedRow.displayedPathSegments == ["src", "lib", "core"])
+
+        model.select("src/")
+        #expect(model.selection == ["src/lib/core/"])
+        #expect(model.focusedID == "src/lib/core/")
+
+        model.expand("src/lib/")
+        #expect(
+            model.visibleRows.map(\.id)
+                == [
+                    "src/lib/core/",
+                    "src/lib/core/First.swift",
+                    "src/lib/core/Second.swift",
+                    "Assets/",
+                    "README.md"
+                ]
+        )
+        #expect(model.visibleRows[1].parentID == "src/lib/core/")
+        #expect(model.visibleRows[1].depth == 1)
+    }
+
+    @Test
+    func flatteningStopsAtCanonicalBranchBoundaries() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Branch/Leaf.swift",
+                "Root/Sibling/Other.swift",
+                "Single/Child/File.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true),
+            initialExpansion: .identifiers(["Root/"])
+        )
+
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["Root/", "Root/Branch/", "Root/Sibling/", "Single/Child/"]
+        )
+        #expect(!model.visibleRows[0].isFlattened)
+        #expect(model.visibleRows[1].representedIDs == ["Root/Branch/"])
+        #expect(model.visibleRows[3].representedIDs == ["Single/", "Single/Child/"])
+    }
+
+    @Test
+    func togglingFlatteningPreservesCanonicalStateAndRestoresProjection() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Branch/Leaf/First.swift",
+                "Root/Branch/Leaf/Second.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true),
+            initialExpansion: .identifiers(["Root/Branch/Leaf/"]),
+            initialSelection: ["Root/Branch/Leaf/"]
+        )
+
+        let flattenedRows = model.visibleRows.map(\.id)
+        #expect(flattenedRows == [
+            "Root/Branch/Leaf/",
+            "Root/Branch/Leaf/First.swift",
+            "Root/Branch/Leaf/Second.swift"
+        ])
+
+        model.setFlattenEmptyDirectories(false)
+        #expect(!model.flattenEmptyDirectories)
+        #expect(model.visibleRows.map(\.id) == ["Root/"])
+        #expect(model.selection == ["Root/Branch/Leaf/"])
+        #expect(model.expandedIDs == ["Root/Branch/Leaf/"])
+
+        model.setFlattenEmptyDirectories(true)
+        #expect(model.visibleRows.map(\.id) == flattenedRows)
+        #expect(model.selection == ["Root/Branch/Leaf/"])
+        #expect(model.focusedID == "Root/Branch/Leaf/")
+    }
+
+    @Test
+    func searchAndResetRecomputeFlattenedRowsDeterministically() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["Root/Branch/Leaf/Target.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+
+        #expect(model.visibleRows.map(\.id) == ["Root/Branch/Leaf/"])
+        model.openSearch(initialQuery: "target")
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["Root/Branch/Leaf/", "Root/Branch/Leaf/Target.swift"]
+        )
+        #expect(model.visibleRows[0].representedIDs == [
+            "Root/", "Root/Branch/", "Root/Branch/Leaf/"
+        ])
+
+        model.closeSearch()
+        try model.resetPaths([
+            "Root/Branch/Leaf/Target.swift",
+            "Root/Branch/Other.swift"
+        ])
+        #expect(model.flattenEmptyDirectories)
+        #expect(model.visibleRows.map(\.id) == ["Root/Branch/"])
+        #expect(model.visibleRows[0].representedIDs == ["Root/", "Root/Branch/"])
+    }
+
+    @Test
     func createsAModelDirectlyFromPaths() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Sources/App.swift", "README.md"],

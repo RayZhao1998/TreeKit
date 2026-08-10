@@ -45,6 +45,7 @@ let model = try FileTreeModel<FileTreePath>(
 
 - ``FileTreeModel``
 - ``FileTreeVisibleRow``
+- ``FileTreeRowSegment``
 - ``FileTreeRowContext``
 - ``FileTreeInitialExpansion``
 - ``FileTreeSearchMode``
@@ -53,6 +54,10 @@ let model = try FileTreeModel<FileTreePath>(
 ### Navigation and interaction
 
 - <doc:NavigatingFileTrees>
+
+### Flattening paths
+
+- <doc:FlatteningFileTrees>
 
 ### Updating paths
 

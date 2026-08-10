@@ -59,9 +59,18 @@ public struct FileTreePathOptions: Equatable, Sendable {
     }
 
     public var sort: Sort
+    /// Combines a chain of single-child directories into one visible row.
+    ///
+    /// Canonical hierarchy and mutation paths remain unchanged. The terminal directory owns the
+    /// flattened row's selection, focus, expansion, reveal, and activation identity.
+    public var flattenEmptyDirectories: Bool
 
-    public init(sort: Sort = .foldersFirst) {
+    public init(
+        sort: Sort = .foldersFirst,
+        flattenEmptyDirectories: Bool = false
+    ) {
         self.sort = sort
+        self.flattenEmptyDirectories = flattenEmptyDirectories
     }
 }
 
@@ -209,6 +218,7 @@ public extension FileTreeModel where Node == FileTreePath {
             paths: paths,
             options: options
         )
+        setPathFlattenEmptyDirectories(options.flattenEmptyDirectories, publishing: false)
     }
 }
 
