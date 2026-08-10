@@ -441,6 +441,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         guard mode != searchMode else { return }
         searchMode = mode
         rebuildVisibleRows()
+        normalizeSearchFocusIfNeeded()
         expansionRevision &+= 1
         searchRevision &+= 1
         publishChange()
@@ -885,6 +886,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     private func normalizeSearchFocusIfNeeded() {
+        if let focusedID, let row = visibleRow(for: focusedID) {
+            self.focusedID = row.id
+        }
         guard hasActiveSearchQuery else { return }
         let visibleMatchIDs = visibleSearchMatchIDs()
         guard !visibleMatchIDs.isEmpty else { return }
