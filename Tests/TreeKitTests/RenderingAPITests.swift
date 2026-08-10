@@ -58,6 +58,24 @@ struct RenderingAPITests {
     }
 
     @Test
+    func deferredRendererTeardownDoesNotCancelAReplacementRename() async throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["First.swift", "Second.swift"]
+        )
+        try model.startRenaming("First.swift")
+        #expect(model.renamingID == "First.swift")
+        let staleRevision = model.renameRevision
+        let deferredCleanup = Task { @MainActor in
+            model.cancelActiveRename(ifRevision: staleRevision)
+        }
+
+        try model.startRenaming("Second.swift")
+        await deferredCleanup.value
+
+        #expect(model.renamingID == "Second.swift")
+    }
+
+    @Test
     func appKitReplaysExpansionRequestedForAHiddenDescendant() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Root/Folder/File.swift"],

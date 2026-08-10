@@ -258,6 +258,11 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         cancel?()
     }
 
+    internal func cancelActiveRename(ifRevision revision: UInt64) {
+        guard renameRevision == revision else { return }
+        cancelActiveRename()
+    }
+
     internal func clearRenameSession(publishing: Bool) {
         let hadSession = activeRenamingID != nil || activeRenameError != nil
         activeRenamingID = nil
