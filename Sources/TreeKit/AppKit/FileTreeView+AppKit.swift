@@ -729,7 +729,7 @@ private extension FileTreeView {
             guard target.position == .inside,
                   let path = target.path,
                   path.kind == .directory,
-                  !model.expandedIDs.contains(path.id)
+                  !model.isRenderedExpanded(path.id)
             else {
                 cancelHoverExpansion()
                 return

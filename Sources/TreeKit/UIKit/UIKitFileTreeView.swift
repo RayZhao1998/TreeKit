@@ -500,10 +500,19 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         else { return [] }
 
         return dragSession.sourcePaths.map { path in
-            let item = UIDragItem(itemProvider: NSItemProvider(object: path.path as NSString))
+            let provider = NSItemProvider()
+            provider.registerObject(path.path as NSString, visibility: .ownProcess)
+            let item = UIDragItem(itemProvider: provider)
             item.localObject = dragSession
             return item
         }
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        dragSessionIsRestrictedToDraggingApplication session: any UIDragSession
+    ) -> Bool {
+        true
     }
 
     public func collectionView(
@@ -653,7 +662,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         guard target.position == .inside,
               let path = target.path,
               path.kind == .directory,
-              !model.expandedIDs.contains(path.id)
+              !model.isRenderedExpanded(path.id)
         else {
             cancelDropHoverExpansion()
             return
