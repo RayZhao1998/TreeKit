@@ -575,6 +575,23 @@ struct FileTreeModelTests {
     }
 
     @Test
+    func revealExpandsCollapsedTargetsDuringExpandMatchesSearch() throws {
+        let model = FileTreeModel(try makeSearchTree())
+        model.setSearchMode(.expandMatches)
+        model.openSearch(initialQuery: "logger")
+
+        #expect(model.visibleRow(for: "Tests/AppTests.swift") == nil)
+
+        model.reveal("Tests/AppTests.swift", position: .center)
+
+        #expect(model.expandedIDs.contains("Tests/"))
+        #expect(model.visibleRow(for: "Tests/AppTests.swift") != nil)
+        #expect(model.selection == ["Tests/AppTests.swift"])
+        #expect(model.focusedID == "Tests/AppTests.swift")
+        #expect(model.revealRequest?.id == "Tests/AppTests.swift")
+    }
+
+    @Test
     func scopedInteractionPublishersIgnoreUnrelatedRevisions() throws {
         let tree = try PreparedTree(
             roots: [TestNode(id: "root", children: [TestNode(id: "child")])],
