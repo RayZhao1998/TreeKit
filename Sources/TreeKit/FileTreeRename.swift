@@ -99,7 +99,10 @@ public extension FileTreeModel where Node == FileTreePath {
         guard preparedTree.contains(requestedID) else {
             try failRename(.identityNotFound(path: requestedID))
         }
-        let targetID = visibleRow(for: requestedID)?.id ?? requestedID
+        if isSearchOpen {
+            closeSearch()
+        }
+        let targetID = interactionID(for: requestedID)
         guard let source = preparedTree.node(for: targetID) else {
             try failRename(.identityNotFound(path: targetID))
         }
@@ -108,9 +111,6 @@ public extension FileTreeModel where Node == FileTreePath {
             try failRename(.policyRejected(path: source.path))
         }
 
-        if isSearchOpen {
-            closeSearch()
-        }
         reveal(targetID, select: true, position: .nearest, focus: true)
         beginRenameSession(
             id: targetID,

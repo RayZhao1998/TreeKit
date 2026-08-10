@@ -25,8 +25,11 @@ struct RenderingAPITests {
         let view = FileTreeView(model: original)
 
         #expect(view.model === original)
+        try original.startRenaming("Original.swift")
+        #expect(original.renamingID == "Original.swift")
         view.model = replacement
         #expect(view.model === replacement)
+        #expect(original.renamingID == nil)
 
         view.reloadRows()
         _ = view.focusTree()

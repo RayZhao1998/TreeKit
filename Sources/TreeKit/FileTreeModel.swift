@@ -815,7 +815,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         }
     }
 
-    private func interactionID(for id: Node.ID) -> Node.ID {
+    internal func interactionID(for id: Node.ID) -> Node.ID {
         if let visibleID = visibleRow(for: id)?.id {
             return visibleID
         }

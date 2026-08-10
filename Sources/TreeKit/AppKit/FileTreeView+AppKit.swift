@@ -17,6 +17,7 @@ public final class FileTreeView<Node: Identifiable>: NSView {
     public var model: FileTreeModel<Node> {
         didSet {
             guard oldValue !== model else { return }
+            oldValue.cancelActiveRename()
             normalizeModelSelectionIfNeeded()
             coordinator.invalidateModel()
             coordinator.synchronize(forceRowReload: true)

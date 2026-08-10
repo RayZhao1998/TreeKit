@@ -7,6 +7,24 @@ import Testing
 @MainActor
 struct FileTreeRenameTests {
     @Test
+    func hiddenFlattenedRenameTargetsTheMountedTerminalRow() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Branch/Chain/Leaf/File.swift",
+                "Root/Sibling.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+
+        try model.startRenaming("Root/Branch/")
+
+        #expect(model.renamingID == "Root/Branch/Chain/Leaf/")
+        #expect(model.focusedID == "Root/Branch/Chain/Leaf/")
+        #expect(model.selection == ["Root/Branch/Chain/Leaf/"])
+        #expect(model.visibleRow(for: "Root/Branch/")?.id == "Root/Branch/Chain/Leaf/")
+    }
+
+    @Test
     func commitsAFileRenameThroughTheSharedMutationAndEmitsTypedState() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Sources/Feature.swift", "Sources/Other.swift"],
