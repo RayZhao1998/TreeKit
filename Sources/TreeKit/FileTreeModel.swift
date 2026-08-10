@@ -958,15 +958,33 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             }
         }
 
+        func projectedRequiredExpansion(
+            visibleIDSet: Set<Node.ID>?
+        ) -> Set<Node.ID> {
+            Set(requiredExpandedIDs.compactMap { id in
+                let terminalID = Self.flattenedDirectoryChain(
+                    startingAt: id,
+                    in: preparedTree,
+                    visibleIDSet: visibleIDSet,
+                    enabled: pathFlattenEmptyDirectories
+                ).last ?? id
+                return preparedTree.isExpandable(terminalID) ? terminalID : nil
+            })
+        }
+
         switch searchMode {
         case .expandMatches:
-            renderedExpandedIDs = expandedIDs.union(requiredExpandedIDs)
+            renderedExpandedIDs = expandedIDs.union(
+                projectedRequiredExpansion(visibleIDSet: nil)
+            )
             searchVisibleIDSet = nil
         case .collapseNonMatches:
-            renderedExpandedIDs = requiredExpandedIDs
+            renderedExpandedIDs = projectedRequiredExpansion(visibleIDSet: nil)
             searchVisibleIDSet = nil
         case .hideNonMatches:
-            renderedExpandedIDs = requiredExpandedIDs
+            renderedExpandedIDs = projectedRequiredExpansion(
+                visibleIDSet: contextualVisibleIDs
+            )
             searchVisibleIDSet = contextualVisibleIDs
         }
     }
