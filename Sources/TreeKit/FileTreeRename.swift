@@ -169,6 +169,12 @@ public extension FileTreeModel where Node == FileTreePath {
         guard !preparedTree.contains(destinationString) else {
             try failRename(.duplicateDestination(path: destinationString))
         }
+        let oppositeKindIdentity = source.kind == .directory
+            ? String(destinationString.dropLast())
+            : destinationString + "/"
+        guard !preparedTree.contains(oppositeKindIdentity) else {
+            try failRename(.duplicateDestination(path: destinationString))
+        }
 
         let destination: FileTreePath
         do {

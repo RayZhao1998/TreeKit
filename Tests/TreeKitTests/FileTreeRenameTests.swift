@@ -157,6 +157,31 @@ struct FileTreeRenameTests {
     }
 
     @Test
+    func oppositeKindSiblingCollisionsKeepTheRenameSessionActive() throws {
+        let fileModel = try FileTreeModel<FileTreePath>(paths: ["Source.swift", "Taken/"])
+        try fileModel.startRenaming("Source.swift")
+
+        #expect(throws: FileTreeRenameError.duplicateDestination(path: "Taken")) {
+            try fileModel.commitRenaming("Taken")
+        }
+        #expect(fileModel.renamingID == "Source.swift")
+        #expect(fileModel.renameError == .duplicateDestination(path: "Taken"))
+        #expect(fileModel.preparedTree.contains("Source.swift"))
+        #expect(fileModel.preparedTree.contains("Taken/"))
+
+        let directoryModel = try FileTreeModel<FileTreePath>(paths: ["Source/", "Taken"])
+        try directoryModel.startRenaming("Source/")
+
+        #expect(throws: FileTreeRenameError.duplicateDestination(path: "Taken/")) {
+            try directoryModel.commitRenaming("Taken")
+        }
+        #expect(directoryModel.renamingID == "Source/")
+        #expect(directoryModel.renameError == .duplicateDestination(path: "Taken/"))
+        #expect(directoryModel.preparedTree.contains("Source/"))
+        #expect(directoryModel.preparedTree.contains("Taken"))
+    }
+
+    @Test
     func appKitProvidesKeyboardCommitAndCancelForTheSharedSession() throws {
         let model = try FileTreeModel<FileTreePath>(paths: ["First.swift", "Second.swift"])
         let view = FileTreeView(model: model)
