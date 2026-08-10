@@ -46,7 +46,8 @@ model.scrollTo(path, focus: false)
 The first call also updates model focus and asks the native tree to accept keyboard focus. The
 second call preserves both selection and model focus. The existing
 ``FileTreeModel/reveal(_:select:position:focus:)`` method exposes the same independent controls
-when a caller also wants optional selection.
+when a caller also wants optional selection. A request for an identity excluded by the active
+search projection is ignored so native renderers never receive an unfulfillable scroll request.
 
 ## Observe only interaction state
 

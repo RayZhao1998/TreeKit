@@ -425,6 +425,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         focus: Bool = true
     ) {
         guard preparedTree.contains(id) else { return }
+        // Search owns the rendered projection. Do not publish an unfulfillable native request or
+        // move interaction state to an identity that the active projection excludes.
+        guard !hasActiveSearchQuery || visibleRow(for: id) != nil else { return }
 
         var newlyExpandedAncestors: [Node.ID] = []
         for ancestorID in preparedTree.ancestorIDs(of: id) where preparedTree.isExpandable(ancestorID) {
@@ -462,6 +465,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Reveals and scrolls to one item without forcing selection.
     ///
     /// Pass `focus: false` to preserve model focus while still expanding ancestors and scrolling.
+    /// Requests for identities excluded by an active search projection are ignored.
     public func scrollTo(
         _ id: Node.ID,
         position: FileTreeScrollPosition = .nearest,

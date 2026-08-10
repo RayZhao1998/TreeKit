@@ -202,7 +202,8 @@ model.scrollTo(id, focus: false)                   // Scroll only.
 
 Traversal follows the active expansion and search projection. Next and previous clamp at the
 visible boundaries. Nearest focus chooses the requested visible row, its closest visible ancestor,
-or the last retained visible position when an item was removed.
+or the last retained visible position when an item was removed. Scroll and reveal requests for an
+identity excluded by the active search projection are ignored without changing focus or selection.
 
 Sibling SwiftUI, AppKit, and UIKit state can subscribe without observing unrelated revisions:
 

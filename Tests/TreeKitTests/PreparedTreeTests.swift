@@ -554,6 +554,27 @@ struct FileTreeModelTests {
     }
 
     @Test
+    func revealRejectsTargetsExcludedByActiveSearch() throws {
+        let model = FileTreeModel(
+            try makeSearchTree(),
+            initialSelection: ["README.md"]
+        )
+        model.openSearch(initialQuery: "logger")
+        let focusedID = model.focusedID
+        let selection = model.selection
+        let revision = model.revision
+
+        model.scrollTo("Tests/AppTests.swift")
+        model.reveal("Tests/AppTests.swift")
+
+        #expect(model.visibleRow(for: "Tests/AppTests.swift") == nil)
+        #expect(model.focusedID == focusedID)
+        #expect(model.selection == selection)
+        #expect(model.revealRequest == nil)
+        #expect(model.revision == revision)
+    }
+
+    @Test
     func scopedInteractionPublishersIgnoreUnrelatedRevisions() throws {
         let tree = try PreparedTree(
             roots: [TestNode(id: "root", children: [TestNode(id: "child")])],
