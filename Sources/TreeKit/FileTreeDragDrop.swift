@@ -204,8 +204,11 @@ public extension FileTreeModel where Node == FileTreePath {
             throw FileTreeDragDropError.sourceNotFound(path: id)
         }
         let selectedIDs = selection.contains(id) ? selection : [id]
+        let sourceIDs = Set(selectedIDs.map { selectedID in
+            renderedDragSourcePath(for: selectedID)?.id ?? selectedID
+        })
         let orderedPaths = preparedTree.preorderIDs.compactMap { selectedID -> FileTreePath? in
-            guard selectedIDs.contains(selectedID) else { return nil }
+            guard sourceIDs.contains(selectedID) else { return nil }
             return preparedTree.node(for: selectedID)
         }
         let normalized = normalizedDragSources(orderedPaths)
@@ -283,6 +286,11 @@ public extension FileTreeModel where Node == FileTreePath {
 
     internal var dragDropOpenDelay: TimeInterval {
         (fileTreeDragDropConfiguration ?? .init()).openOnDropDelay
+    }
+
+    internal func renderedDragSourcePath(for id: String) -> FileTreePath? {
+        let sourceID = visibleRow(for: id)?.representedIDs.first ?? id
+        return preparedTree.node(for: sourceID)
     }
 
     /// Resolves a native rendered row back to the canonical target that owns its placement.

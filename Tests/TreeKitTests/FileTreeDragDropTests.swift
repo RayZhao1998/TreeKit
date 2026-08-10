@@ -192,6 +192,28 @@ struct FileTreeDragDropTests {
     }
 
     @Test
+    func flattenedSourceRowsMoveTheirRepresentedHeadHierarchy() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["src/lib/core/File.swift", "Destination/"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true),
+            initialSelection: ["src/lib/core/"]
+        )
+        #expect(model.visibleRows.map(\.id) == ["src/lib/core/", "Destination/"])
+
+        let session = try model.makeDragSession(startingAt: "src/lib/core/")
+        #expect(session.sourcePaths.map(\.path) == ["src/"])
+        let target = FileTreeDropTarget(
+            path: try FileTreePath(path: "Destination/", kind: .directory),
+            position: .inside
+        )
+
+        try model.performDrop(session, target: target)
+
+        #expect(!model.preparedTree.contains("src/"))
+        #expect(model.preparedTree.contains("Destination/src/lib/core/File.swift"))
+    }
+
+    @Test
     func rejectsANativeSessionFromAnotherModel() throws {
         let sourceModel = try FileTreeModel<FileTreePath>(
             paths: ["Source.swift", "Target/"]

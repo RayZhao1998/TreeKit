@@ -189,6 +189,21 @@ struct RenderingAPITests {
                 NSPasteboard.PasteboardType("software.trees.TreeKit.paths")
             )
         )
+
+        outlineView.selectRowIndexes(IndexSet([0, 1]), byExtendingSelection: false)
+        let pasteboardType = NSPasteboard.PasteboardType("software.trees.TreeKit.paths")
+        let payloads = try [0, 1].map { row -> [String: Any] in
+            let item = try #require(outlineView.item(atRow: row))
+            let writer = try #require(
+                outlineView.dataSource?.outlineView?(
+                    outlineView,
+                    pasteboardWriterForItem: item
+                ) as? NSPasteboardItem
+            )
+            return try #require(writer.propertyList(forType: pasteboardType) as? [String: Any])
+        }
+        #expect(payloads.compactMap { $0["path"] as? String } == ["A.swift", "B.swift"])
+        #expect(payloads.allSatisfy { $0["paths"] == nil })
     }
 
     @Test

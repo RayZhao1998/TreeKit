@@ -273,6 +273,8 @@ private extension FileTreeView {
         private var appliedDataRevision: UInt64?
         private var appliedExpansionRevision: UInt64?
         private var appliedSearchRevision: UInt64?
+        private var pendingDragSession: FileTreeDragSession?
+        private var pendingDragRevision: UInt64?
         private var appliedRenameRevision: UInt64?
         private var requestedExpandedIDs: Set<Node.ID> = []
         private var appliedExpandedIDs: Set<Node.ID> = []
@@ -493,13 +495,15 @@ private extension FileTreeView {
                 let pathModel = owner.model as? FileTreeModel<FileTreePath>,
                 let box = item as? ItemBox,
                 let id = box.id as? String,
-                let session = try? pathModel.makeDragSession(startingAt: id)
+                let sourcePath = pathModel.renderedDragSourcePath(for: id),
+                let session = dragSessionForWriting(startingAt: id, model: pathModel),
+                session.sourcePaths.contains(where: { $0.id == sourcePath.id })
             else { return nil }
 
             let pasteboardItem = NSPasteboardItem()
             pasteboardItem.setPropertyList(
                 [
-                    "paths": session.sourcePaths.map(\.path),
+                    "path": sourcePath.path,
                     "origin": session.originID?.uuidString ?? ""
                 ],
                 forType: Self.pathPasteboardType
@@ -557,6 +561,8 @@ private extension FileTreeView {
             operation: NSDragOperation
         ) {
             cancelHoverExpansion()
+            pendingDragSession = nil
+            pendingDragRevision = nil
         }
 
         func outlineView(
@@ -692,16 +698,36 @@ private extension FileTreeView {
         }
 
         private func dragSession(from pasteboard: NSPasteboard) -> FileTreeDragSession? {
+            let payloads = (pasteboard.pasteboardItems ?? []).compactMap { item -> (String, String)? in
+                guard
+                    let propertyList = item.propertyList(forType: Self.pathPasteboardType)
+                        as? [String: Any],
+                    let path = propertyList["path"] as? String,
+                    let origin = propertyList["origin"] as? String
+                else { return nil }
+                return (path, origin)
+            }
             guard
-                let propertyList = pasteboard.propertyList(forType: Self.pathPasteboardType)
-                    as? [String: Any],
-                let pathStrings = propertyList["paths"] as? [String],
-                let originString = propertyList["origin"] as? String,
+                let originString = payloads.first?.1,
+                payloads.allSatisfy({ $0.1 == originString }),
                 let originID = UUID(uuidString: originString)
             else { return nil }
-            let paths = pathStrings.compactMap { try? FileTreePath(path: $0) }
+            let paths = payloads.compactMap { try? FileTreePath(path: $0.0) }
             guard !paths.isEmpty else { return nil }
             return FileTreeDragSession(sourcePaths: paths, originID: originID)
+        }
+
+        private func dragSessionForWriting(
+            startingAt id: String,
+            model: FileTreeModel<FileTreePath>
+        ) -> FileTreeDragSession? {
+            if pendingDragRevision == model.revision, let pendingDragSession {
+                return pendingDragSession
+            }
+            guard let session = try? model.makeDragSession(startingAt: id) else { return nil }
+            pendingDragSession = session
+            pendingDragRevision = model.revision
+            return session
         }
 
         private func dropTarget(
