@@ -20,6 +20,25 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// The focused row identity, if any.
     public private(set) var focusedID: Node.ID?
 
+    /// Emits the current selection immediately, then only distinct selection changes.
+    ///
+    /// Use this publisher for sibling UI that does not need to observe unrelated model revisions.
+    public var selectionChanges: AnyPublisher<Set<Node.ID>, Never> {
+        selectionChangeSubject()
+            .removeDuplicates()
+            .eraseToAnyPublisher()
+    }
+
+    /// Emits the current focused identity immediately, then only distinct focus changes.
+    ///
+    /// Focus is independent from selection, so command routing can move through visible rows
+    /// without changing the selected identities.
+    public var focusChanges: AnyPublisher<Node.ID?, Never> {
+        focusChangeSubject()
+            .removeDuplicates()
+            .eraseToAnyPublisher()
+    }
+
     /// The visible projection in depth-first preorder.
     public private(set) var visibleRows: [FileTreeVisibleRow<Node>]
 
@@ -46,10 +65,13 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     private var visibleIndexByID: [Node.ID: Int] = [:]
     private var revealSequence: UInt64 = 0
+    private var lastFocusedVisibleIndex: Int?
     private var matchingIDSet: Set<Node.ID> = []
     private var searchVisibleIDSet: Set<Node.ID>?
     private var normalizedSearchTextByID: [Node.ID: String]?
     private let searchText: (Node) -> String
+    private var selectionChangesSubject: CurrentValueSubject<Set<Node.ID>, Never>?
+    private var focusChangesSubject: CurrentValueSubject<Node.ID?, Never>?
     internal var fileTreePathMutationState: FileTreePathMutationState? = nil
     internal var fileTreePathMutationSubject: PassthroughSubject<
         FileTreePathMutationEvent,
@@ -77,7 +99,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         self.searchMode = searchMode
         self.renderedExpandedIDs = expandedIDs
         self.searchText = searchText
+        self.lastFocusedVisibleIndex = nil
         rebuildVisibleIndex()
+        rememberFocusedVisibleIndex()
     }
 
     /// Replaces the complete hierarchy atomically from the renderer's perspective.
@@ -147,6 +171,24 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         return subject
     }
 
+    private func selectionChangeSubject() -> CurrentValueSubject<Set<Node.ID>, Never> {
+        if let selectionChangesSubject {
+            return selectionChangesSubject
+        }
+        let subject = CurrentValueSubject<Set<Node.ID>, Never>(selection)
+        selectionChangesSubject = subject
+        return subject
+    }
+
+    private func focusChangeSubject() -> CurrentValueSubject<Node.ID?, Never> {
+        if let focusChangesSubject {
+            return focusChangesSubject
+        }
+        let subject = CurrentValueSubject<Node.ID?, Never>(focusedID)
+        focusChangesSubject = subject
+        return subject
+    }
+
     /// Replaces selection with known identifiers from the current hierarchy.
     public func setSelection(_ identifiers: Set<Node.ID>) {
         let valid = identifiers.filtering { preparedTree.contains($0) }
@@ -203,6 +245,83 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         guard preparedTree.contains(id) else { return }
         focusedID = id
         publishChange()
+    }
+
+    /// Focuses the first row in the current visible projection.
+    @discardableResult
+    public func focusFirstItem() -> Node.ID? {
+        guard !visibleRows.isEmpty else {
+            focus(nil)
+            return nil
+        }
+        return focusVisibleItem(at: visibleRows.startIndex)
+    }
+
+    /// Focuses the last row in the current visible projection.
+    @discardableResult
+    public func focusLastItem() -> Node.ID? {
+        guard !visibleRows.isEmpty else {
+            focus(nil)
+            return nil
+        }
+        return focusVisibleItem(at: visibleRows.index(before: visibleRows.endIndex))
+    }
+
+    /// Focuses the next visible row, clamping at the final row.
+    @discardableResult
+    public func focusNextItem() -> Node.ID? {
+        guard !visibleRows.isEmpty else {
+            focus(nil)
+            return nil
+        }
+        guard let currentIndex = nearestVisibleIndex(to: focusedID) else {
+            return focusVisibleItem(at: visibleRows.startIndex)
+        }
+        return focusVisibleItem(at: min(visibleRows.index(before: visibleRows.endIndex), currentIndex + 1))
+    }
+
+    /// Focuses the previous visible row, clamping at the first row.
+    @discardableResult
+    public func focusPreviousItem() -> Node.ID? {
+        guard !visibleRows.isEmpty else {
+            focus(nil)
+            return nil
+        }
+        guard let currentIndex = nearestVisibleIndex(to: focusedID) else {
+            return focusVisibleItem(at: visibleRows.index(before: visibleRows.endIndex))
+        }
+        return focusVisibleItem(at: max(visibleRows.startIndex, currentIndex - 1))
+    }
+
+    /// Focuses the visible parent of the focused row without changing selection.
+    @discardableResult
+    public func focusParentItem() -> Node.ID? {
+        guard let focusedID else { return nil }
+        if let row = visibleRow(for: focusedID), let parentID = row.parentID {
+            return focusVisibleItem(id: parentID)
+        }
+        guard let nearestIndex = nearestVisibleIndex(to: focusedID) else { return nil }
+        return focusVisibleItem(at: nearestIndex)
+    }
+
+    /// Focuses an identity when visible, its closest visible ancestor when hidden, or the nearest
+    /// retained visible index when the preferred identity was removed.
+    ///
+    /// Passing `nil` keeps a visible current focus. Otherwise it recovers from the last focused
+    /// row position and finally falls back to the first visible row.
+    @discardableResult
+    public func focusNearestItem(to preferredID: Node.ID? = nil) -> Node.ID? {
+        guard !visibleRows.isEmpty else {
+            focus(nil)
+            return nil
+        }
+        if let index = nearestVisibleIndex(to: preferredID ?? focusedID) {
+            return focusVisibleItem(at: index)
+        }
+        if let lastFocusedVisibleIndex {
+            return focusVisibleItem(at: min(lastFocusedVisibleIndex, visibleRows.count - 1))
+        }
+        return focusVisibleItem(at: visibleRows.startIndex)
     }
 
     /// Expands one branch. Expanding a hidden descendant records state without forcing ancestors open.
@@ -327,7 +446,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         if select {
             selection = [id]
         }
-        focusedID = id
+        if focus {
+            focusedID = id
+        }
         revealSequence &+= 1
         revealRequest = FileTreeRevealRequest(
             sequence: revealSequence,
@@ -336,6 +457,17 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             focus: focus
         )
         publishChange()
+    }
+
+    /// Reveals and scrolls to one item without forcing selection.
+    ///
+    /// Pass `focus: false` to preserve model focus while still expanding ancestors and scrolling.
+    public func scrollTo(
+        _ id: Node.ID,
+        position: FileTreeScrollPosition = .nearest,
+        focus: Bool = true
+    ) {
+        reveal(id, select: false, position: position, focus: focus)
     }
 
     /// Returns a safe copy of a visible row range.
@@ -490,6 +622,47 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         }
     }
 
+    private func rememberFocusedVisibleIndex() {
+        guard let focusedID, let index = visibleIndexByID[focusedID] else { return }
+        lastFocusedVisibleIndex = index
+    }
+
+    private func nearestVisibleIndex(to candidateID: Node.ID?) -> Int? {
+        guard let candidateID else { return nil }
+        if let index = visibleIndexByID[candidateID] {
+            return index
+        }
+        guard preparedTree.contains(candidateID) else { return nil }
+        return preparedTree.ancestorIDs(of: candidateID).reversed().lazy
+            .compactMap { self.visibleIndexByID[$0] }
+            .first
+    }
+
+    @discardableResult
+    private func focusVisibleItem(id: Node.ID) -> Node.ID? {
+        guard let index = visibleIndexByID[id] else { return focusedID }
+        return focusVisibleItem(at: index)
+    }
+
+    @discardableResult
+    private func focusVisibleItem(at index: Int) -> Node.ID? {
+        guard visibleRows.indices.contains(index) else { return focusedID }
+        let id = visibleRows[index].id
+        guard focusedID != id else { return id }
+
+        focusedID = id
+        lastFocusedVisibleIndex = index
+        revealSequence &+= 1
+        revealRequest = FileTreeRevealRequest(
+            sequence: revealSequence,
+            id: id,
+            position: .nearest,
+            focus: true
+        )
+        publishChange()
+        return id
+    }
+
     private var hasActiveSearchQuery: Bool {
         isSearchOpen && !searchQuery.isEmpty
     }
@@ -624,6 +797,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     private func publishChange() {
+        rememberFocusedVisibleIndex()
+        selectionChangesSubject?.send(selection)
+        focusChangesSubject?.send(focusedID)
         revision &+= 1
     }
 }
