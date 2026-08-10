@@ -371,9 +371,6 @@ public extension FileTreeModel where Node == FileTreePath {
                 throw FileTreeDragDropError.duplicateDestination(path: destination.path)
             }
             if destination.id == source.id {
-                if target.position == .inside {
-                    throw FileTreeDragDropError.selfDrop(path: source.path)
-                }
                 continue
             }
             if preparedTree.contains(destination.id) {

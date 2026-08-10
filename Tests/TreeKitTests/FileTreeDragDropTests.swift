@@ -106,6 +106,39 @@ struct FileTreeDragDropTests {
     }
 
     @Test
+    func insideDropAppendsSameParentAndMixedSources() throws {
+        let sameParentModel = try FileTreeModel<FileTreePath>(
+            paths: ["Parent/A.swift", "Parent/B.swift", "Parent/C.swift"],
+            options: .init(sort: .inputOrder),
+            initialSelection: ["Parent/B.swift"]
+        )
+        let parentTarget = FileTreeDropTarget(
+            path: try FileTreePath(path: "Parent/", kind: .directory),
+            position: .inside
+        )
+        let sameParentSession = try sameParentModel.makeDragSession(
+            startingAt: "Parent/B.swift"
+        )
+
+        try sameParentModel.performDrop(sameParentSession, target: parentTarget)
+        #expect(sameParentModel.preparedTree.childrenByID["Parent/"] == [
+            "Parent/A.swift", "Parent/C.swift", "Parent/B.swift"
+        ])
+
+        let mixedModel = try FileTreeModel<FileTreePath>(
+            paths: ["Parent/A.swift", "Parent/B.swift", "External.swift"],
+            options: .init(sort: .inputOrder),
+            initialSelection: ["Parent/B.swift", "External.swift"]
+        )
+        let mixedSession = try mixedModel.makeDragSession(startingAt: "Parent/B.swift")
+
+        try mixedModel.performDrop(mixedSession, target: parentTarget)
+        #expect(mixedModel.preparedTree.childrenByID["Parent/"] == [
+            "Parent/A.swift", "Parent/B.swift", "Parent/External.swift"
+        ])
+    }
+
+    @Test
     func movesAcrossDirectoriesAndIntoCollapsedTargets() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Source/One.swift", "Source/Two.swift", "Target/Existing.swift"],
