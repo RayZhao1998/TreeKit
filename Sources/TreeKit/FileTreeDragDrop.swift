@@ -314,6 +314,11 @@ public extension FileTreeModel where Node == FileTreePath {
             return current
         }
         let canonicalSources = normalizedDragSources(resolvedSources)
+        let configuration = fileTreeDragDropConfiguration ?? .init()
+        if enforcingPolicy, session.originID == nil,
+           !configuration.canDrag(canonicalSources) {
+            throw FileTreeDragDropError.dragRejected(paths: canonicalSources.map(\.path))
+        }
 
         let canonicalTarget: FileTreePath?
         if let requestedTarget = target.path {
@@ -393,8 +398,7 @@ public extension FileTreeModel where Node == FileTreePath {
             target: resolvedTarget,
             destinationPaths: destinations
         )
-        if enforcingPolicy,
-           !(fileTreeDragDropConfiguration ?? .init()).canDrop(proposal) {
+        if enforcingPolicy, !configuration.canDrop(proposal) {
             throw FileTreeDragDropError.dropRejected
         }
         return proposal

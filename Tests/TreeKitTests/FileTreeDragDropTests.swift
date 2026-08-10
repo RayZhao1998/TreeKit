@@ -45,6 +45,39 @@ struct FileTreeDragDropTests {
     }
 
     @Test
+    func customSessionsCannotBypassSourcePolicy() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["Protected.swift", "Target/"]
+        )
+        var failures: [FileTreeDropFailure] = []
+        var canDropCalls = 0
+        model.configureDragAndDrop(.init(
+            canDrag: { !$0.contains(where: { $0.path == "Protected.swift" }) },
+            canDrop: { _ in
+                canDropCalls += 1
+                return true
+            },
+            onDropError: { failures.append($0) }
+        ))
+        let session = FileTreeDragSession(sourcePaths: [
+            try FileTreePath(path: "Protected.swift")
+        ])
+        let target = FileTreeDropTarget(
+            path: try FileTreePath(path: "Target/", kind: .directory),
+            position: .inside
+        )
+
+        #expect(!model.canDrop(session, target: target))
+        #expect(throws: FileTreeDragDropError.dragRejected(paths: ["Protected.swift"])) {
+            try model.performDrop(session, target: target)
+        }
+        #expect(canDropCalls == 0)
+        #expect(failures.last?.error == .dragRejected(paths: ["Protected.swift"]))
+        #expect(model.preparedTree.contains("Protected.swift"))
+        #expect(!model.preparedTree.contains("Target/Protected.swift"))
+    }
+
+    @Test
     func reordersMultipleInputOrderSiblingsBeforeAndAfter() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["A.swift", "B.swift", "C.swift", "D.swift"],
