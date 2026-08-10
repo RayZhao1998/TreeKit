@@ -22,6 +22,44 @@ enum DemoRenderer: String, CaseIterable, Identifiable {
   }
 }
 
+enum DemoRowStyle: String, CaseIterable, Identifiable {
+  case custom
+  case builtIn
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .custom: "Custom"
+    case .builtIn: "Built-in"
+    }
+  }
+}
+
+enum DemoPathSort: String, CaseIterable, Identifiable {
+  case foldersFirst
+  case lexicographic
+  case inputOrder
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .foldersFirst: "Folders first"
+    case .lexicographic: "Lexicographic"
+    case .inputOrder: "Input order"
+    }
+  }
+
+  var treeKitValue: FileTreePathOptions.Sort {
+    switch self {
+    case .foldersFirst: .foldersFirst
+    case .lexicographic: .lexicographic
+    case .inputOrder: .inputOrder
+    }
+  }
+}
+
 enum DemoGitStatus: String, Decodable, Sendable {
   case modified = "M"
   case added = "A"

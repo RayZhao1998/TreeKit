@@ -8,21 +8,26 @@ struct ContentView: View {
   // lifetime without invalidating this entire split view for every expansion or selection.
   @State private var model: FileTreeModel<FileTreePath>
   @State private var renderer: DemoRenderer
-
-  private let configuration = FileTreeConfiguration(
-    appearance: .sourceList,
-    rowHeight: 26,
-    indentation: 14,
-    contentInsets: .init(top: 6, bottom: 6),
-    selectionMode: .single,
-    allowsEmptySelection: true
-  )
+  @State private var configuration: FileTreeConfiguration
+  @State private var rowStyle: DemoRowStyle = .custom
+  @State private var nativeFocusRequest = 0
+  @State private var nativeReloadRequest = 0
 
   init() {
     _model = State(initialValue: DemoData.makeModel())
     let renderer = ProcessInfo.processInfo.environment["TREEKIT_PERF_RENDERER"]
       .flatMap(DemoRenderer.init(rawValue:)) ?? .swiftUI
     _renderer = State(initialValue: renderer)
+    _configuration = State(
+      initialValue: FileTreeConfiguration(
+        appearance: .sourceList,
+        rowHeight: 26,
+        indentation: 14,
+        contentInsets: .init(top: 6, bottom: 6),
+        selectionMode: .single,
+        allowsEmptySelection: true
+      )
+    )
   }
 
   var body: some View {
@@ -34,7 +39,14 @@ struct ContentView: View {
         treePane
           .frame(minWidth: 360, idealWidth: 430, maxWidth: 560)
 
-        SelectionDetailView(model: model, renderer: renderer)
+        ComponentSettingsView(
+          model: model,
+          renderer: renderer,
+          configuration: $configuration,
+          rowStyle: $rowStyle,
+          onFocusNativeTree: { nativeFocusRequest &+= 1 },
+          onReloadNativeRows: { nativeReloadRequest &+= 1 }
+        )
           .frame(minWidth: 460, maxWidth: .infinity, maxHeight: .infinity)
       }
     }
@@ -204,23 +216,38 @@ struct ContentView: View {
   private var treeSurface: some View {
     switch renderer {
     case .swiftUI:
-      FileTree(
-        model: model,
-        configuration: configuration,
-        onActivate: { node in
-          model.reveal(node.id, position: .nearest)
-        }
-      ) { node, context in
-        CustomFileTreeRow(
-          node: node,
-          context: context,
-          gitStatus: DemoData.gitStatuses[node.id]
+      if rowStyle == .builtIn {
+        FileTree(
+          model: model,
+          configuration: configuration,
+          onActivate: activate
         )
+      } else {
+        FileTree(
+          model: model,
+          configuration: configuration,
+          onActivate: activate
+        ) { node, context in
+          CustomFileTreeRow(
+            node: node,
+            context: context,
+            gitStatus: DemoData.gitStatuses[node.id]
+          )
+        }
       }
 
     case .appKit:
-      NativeFileTree(model: model, configuration: configuration)
+      NativeFileTree(
+        model: model,
+        configuration: configuration,
+        focusRequest: nativeFocusRequest,
+        reloadRequest: nativeReloadRequest
+      )
     }
+  }
+
+  private func activate(_ node: FileTreePath) {
+    model.reveal(node.id, position: .nearest)
   }
 }
 
