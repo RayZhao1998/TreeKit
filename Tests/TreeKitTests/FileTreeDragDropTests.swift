@@ -20,6 +20,31 @@ struct FileTreeDragDropTests {
     }
 
     @Test
+    func customSessionsNormalizeOverlappingSourcesBeforeValidation() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["Folder/Child.swift", "Target/"],
+            options: .init(sort: .inputOrder)
+        )
+        let session = FileTreeDragSession(sourcePaths: [
+            try FileTreePath(path: "Folder/Child.swift"),
+            try FileTreePath(path: "Folder/", kind: .directory)
+        ])
+        let target = FileTreeDropTarget(
+            path: try FileTreePath(path: "Target/", kind: .directory),
+            position: .inside
+        )
+
+        let proposal = try model.dropProposal(for: session, target: target)
+        #expect(proposal.sourcePaths.map(\.path) == ["Folder/"])
+        #expect(model.canDrop(session, target: target))
+
+        let event = try model.performDrop(session, target: target)
+        #expect(event.moves.map(\.sourcePath.path) == ["Folder/"])
+        #expect(model.preparedTree.contains("Target/Folder/Child.swift"))
+        #expect(!model.preparedTree.contains("Folder/"))
+    }
+
+    @Test
     func reordersMultipleInputOrderSiblingsBeforeAndAfter() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["A.swift", "B.swift", "C.swift", "D.swift"],

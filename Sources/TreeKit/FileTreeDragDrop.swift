@@ -208,20 +208,7 @@ public extension FileTreeModel where Node == FileTreePath {
             guard selectedIDs.contains(selectedID) else { return nil }
             return preparedTree.node(for: selectedID)
         }
-        var normalized: [FileTreePath] = []
-        normalized.reserveCapacity(orderedPaths.count)
-        var activeSelectedDirectoryPath: String?
-        for candidate in orderedPaths {
-            if let activeSelectedDirectoryPath,
-               candidate.id.hasPrefix(activeSelectedDirectoryPath) {
-                continue
-            }
-            activeSelectedDirectoryPath = nil
-            normalized.append(candidate)
-            if candidate.kind == .directory {
-                activeSelectedDirectoryPath = candidate.path
-            }
-        }
+        let normalized = normalizedDragSources(orderedPaths)
         guard !normalized.isEmpty else { throw FileTreeDragDropError.noSources }
         let configuration = fileTreeDragDropConfiguration ?? .init()
         guard configuration.canDrag(normalized) else {
@@ -320,12 +307,13 @@ public extension FileTreeModel where Node == FileTreePath {
         if let originID = session.originID, originID != fileTreeDragDropOriginID {
             throw FileTreeDragDropError.foreignSession
         }
-        let canonicalSources = try session.sourcePaths.map { source -> FileTreePath in
+        let resolvedSources = try session.sourcePaths.map { source -> FileTreePath in
             guard let current = preparedTree.node(for: source.id) else {
                 throw FileTreeDragDropError.sourceNotFound(path: source.path)
             }
             return current
         }
+        let canonicalSources = normalizedDragSources(resolvedSources)
 
         let canonicalTarget: FileTreePath?
         if let requestedTarget = target.path {
@@ -410,6 +398,28 @@ public extension FileTreeModel where Node == FileTreePath {
             throw FileTreeDragDropError.dropRejected
         }
         return proposal
+    }
+
+    private func normalizedDragSources(_ sources: [FileTreePath]) -> [FileTreePath] {
+        let sourceIDs = Set(sources.map(\.id))
+        let orderedSources = preparedTree.preorderIDs.compactMap { id in
+            sourceIDs.contains(id) ? preparedTree.node(for: id) : nil
+        }
+        var normalized: [FileTreePath] = []
+        normalized.reserveCapacity(orderedSources.count)
+        var activeSelectedDirectoryPath: String?
+        for candidate in orderedSources {
+            if let activeSelectedDirectoryPath,
+               candidate.id.hasPrefix(activeSelectedDirectoryPath) {
+                continue
+            }
+            activeSelectedDirectoryPath = nil
+            normalized.append(candidate)
+            if candidate.kind == .directory {
+                activeSelectedDirectoryPath = candidate.path
+            }
+        }
+        return normalized
     }
 
     private func dragDropSubject() -> PassthroughSubject<FileTreeDragDropEvent, Never> {
