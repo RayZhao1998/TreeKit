@@ -339,12 +339,14 @@ private extension FileTreeView {
         }
 
         func reloadRows(withIDs identifiers: Set<Node.ID>) {
-            guard let outlineView = owner?.outlineView else { return }
-            let indexes = identifiers.compactMap { id -> Int? in
-                guard let box = boxesByID[id] else { return nil }
+            guard let owner else { return }
+            let outlineView = owner.outlineView
+            let indexes = Set(identifiers.compactMap { id -> Int? in
+                let renderedID = owner.model.visibleRow(for: id)?.id ?? id
+                guard let box = boxesByID[renderedID] else { return nil }
                 let row = outlineView.row(forItem: box)
                 return row >= 0 ? row : nil
-            }
+            })
             guard !indexes.isEmpty else { return }
             outlineView.reloadData(
                 forRowIndexes: IndexSet(indexes),

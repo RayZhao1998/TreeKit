@@ -288,15 +288,20 @@ struct FileTreePathModelTests {
 
         model.openSearch(initialQuery: "branch")
         #expect(model.focusedID == "Root/Branch/")
+        model.select("Root/Branch/")
+        #expect(model.selection == ["Root/Branch/"])
 
         model.setSearchMode(.expandMatches)
         #expect(model.focusedID == "Root/Branch/Leaf/")
+        #expect(model.selection == ["Root/Branch/Leaf/"])
 
         model.setSearchMode(.hideNonMatches)
         #expect(model.focusedID == "Root/Branch/")
+        #expect(model.selection == ["Root/Branch/"])
 
         model.closeSearch()
         #expect(model.focusedID == "Root/Branch/Leaf/")
+        #expect(model.selection == ["Root/Branch/Leaf/"])
         #expect(model.visibleRow(for: "Root/Branch/")?.id == "Root/Branch/Leaf/")
     }
 

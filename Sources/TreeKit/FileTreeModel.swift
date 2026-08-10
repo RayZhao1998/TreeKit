@@ -439,9 +439,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Changes how active matches are projected without changing canonical expansion state.
     public func setSearchMode(_ mode: FileTreeSearchMode) {
         guard mode != searchMode else { return }
+        let previouslyVisibleSelection = Set(selection.filter { visibleRow(for: $0) != nil })
         searchMode = mode
         rebuildVisibleRows()
-        normalizeSearchFocusIfNeeded()
+        normalizeSearchInteractionIfNeeded(
+            remappingPreviouslyVisibleSelection: previouslyVisibleSelection
+        )
         expansionRevision &+= 1
         searchRevision &+= 1
         publishChange()
@@ -846,7 +849,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         searchQuery = normalizedQuery
         refreshSearchMatches(selectingFallbackFocus: true)
         rebuildVisibleRows()
-        normalizeSearchFocusIfNeeded()
+        normalizeSearchInteractionIfNeeded()
         expansionRevision &+= 1
         searchRevision &+= 1
         publishChange()
@@ -885,7 +888,16 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         }
     }
 
-    private func normalizeSearchFocusIfNeeded() {
+    private func normalizeSearchInteractionIfNeeded(
+        remappingPreviouslyVisibleSelection previouslyVisibleSelection: Set<Node.ID> = []
+    ) {
+        selection = Set(selection.map { selectedID in
+            if let row = visibleRow(for: selectedID) { return row.id }
+            guard previouslyVisibleSelection.contains(selectedID) else { return selectedID }
+            return preparedTree.ancestorIDs(of: selectedID).reversed().lazy
+                .compactMap { self.visibleRow(for: $0)?.id }
+                .first ?? selectedID
+        })
         if let focusedID, let row = visibleRow(for: focusedID) {
             self.focusedID = row.id
         }

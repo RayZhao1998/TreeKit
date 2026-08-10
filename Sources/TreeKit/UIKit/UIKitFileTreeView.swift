@@ -139,7 +139,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             guard
                 let indexPath = collectionView.indexPath(for: cell),
                 let row = visibleRow(at: indexPath.item),
-                identifiers.contains(row.id)
+                !identifiers.isDisjoint(with: row.representedIDs)
             else { continue }
             configure(cell, at: indexPath)
         }
