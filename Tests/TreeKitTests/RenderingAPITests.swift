@@ -124,6 +124,29 @@ struct RenderingAPITests {
         #expect(outlineView.isItemExpanded(forcedRoot))
     }
 
+    @Test
+    func mountedAppKitTreeReflectsPathMutationsWithoutModelReplacement() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["Root/Existing.swift"],
+            initialExpansion: .expanded
+        )
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+
+        #expect(outlineView.numberOfRows == 2)
+
+        try model.add("Root/New.swift")
+        #expect(view.model === model)
+        #expect(outlineView.numberOfRows == 3)
+
+        try model.move("Root/New.swift", to: "Root/Renamed.swift")
+        #expect(outlineView.numberOfRows == 3)
+        #expect(model.preparedTree.node(for: "Root/Renamed.swift") != nil)
+
+        try model.remove("Root/Existing.swift")
+        #expect(outlineView.numberOfRows == 2)
+    }
+
     private func findOutlineView(in view: NSView) -> NSOutlineView? {
         if let outlineView = view as? NSOutlineView {
             return outlineView

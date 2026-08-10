@@ -197,12 +197,17 @@ public extension FileTreeModel where Node == FileTreePath {
         initialSelection: Set<String> = [],
         searchMode: FileTreeSearchMode = .hideNonMatches
     ) throws {
-        try self.init(
-            prepareFileTree(paths: paths, options: options),
+        let preparedTree = try prepareFileTree(paths: paths, options: options)
+        self.init(
+            preparedTree,
             initialExpansion: initialExpansion,
             initialSelection: initialSelection,
             searchMode: searchMode,
             searchText: \.path
+        )
+        fileTreePathMutationState = try FileTreePathMutationState(
+            paths: paths,
+            options: options
         )
     }
 }
