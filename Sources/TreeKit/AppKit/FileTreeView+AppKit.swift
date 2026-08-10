@@ -46,6 +46,7 @@ public final class FileTreeView<Node: Identifiable>: NSView {
     private var coordinator: Coordinator!
     private var modelObservation: AnyCancellable?
     private var lastLayoutDirection: NSUserInterfaceLayoutDirection?
+    private var renameRevisionForTeardown: UInt64?
 
     public init(
         model: FileTreeModel<Node>,
@@ -68,8 +69,9 @@ public final class FileTreeView<Node: Identifiable>: NSView {
 
     deinit {
         let model = model
+        guard let renameRevisionForTeardown else { return }
         Task { @MainActor in
-            model.cancelActiveRename()
+            model.cancelActiveRename(ifRevision: renameRevisionForTeardown)
         }
     }
 
@@ -96,7 +98,7 @@ public final class FileTreeView<Node: Identifiable>: NSView {
     public override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window == nil {
-            model.cancelActiveRename()
+            cancelRenameForTeardown()
         }
     }
 
@@ -151,6 +153,12 @@ public final class FileTreeView<Node: Identifiable>: NSView {
             name: NSView.boundsDidChangeNotification,
             object: scrollView.contentView
         )
+    }
+
+    private func cancelRenameForTeardown() {
+        guard let revision = renameRevisionForTeardown else { return }
+        renameRevisionForTeardown = nil
+        model.cancelActiveRename(ifRevision: revision)
     }
 
     @objc private func viewportBoundsDidChange(_ notification: Notification) {
@@ -359,6 +367,9 @@ private extension FileTreeView {
                     && owner.model.activeRenamingID == nil
                 appliedRenamingID = owner.model.activeRenamingID
                 appliedRenameRevision = owner.model.renameRevision
+                owner.renameRevisionForTeardown = appliedRenamingID == nil
+                    ? nil
+                    : appliedRenameRevision
                 if shouldRestoreTreeFocus {
                     _ = owner.window?.makeFirstResponder(outlineView)
                 }

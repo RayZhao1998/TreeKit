@@ -30,6 +30,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             oldValue.cancelActiveRename()
             observedModelIdentifier = nil
             observedRenamingID = nil
+            renameRevisionForTeardown = nil
             lastRevealSequence = nil
             bindToModel()
         }
@@ -63,6 +64,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
     private var observedExpansionRevision: UInt64?
     private var observedSearchRevision: UInt64?
     private var observedRenamingID: Node.ID?
+    private var renameRevisionForTeardown: UInt64?
     private var visibleIndexByID: [Node.ID: Int] = [:]
     private var lastRevealSequence: UInt64?
 
@@ -128,8 +130,9 @@ public final class FileTreeView<Node: Identifiable>: UIView,
 
     deinit {
         let model = model
+        guard let renameRevisionForTeardown else { return }
         Task { @MainActor in
-            model.cancelActiveRename()
+            model.cancelActiveRename(ifRevision: renameRevisionForTeardown)
         }
     }
 
@@ -141,8 +144,14 @@ public final class FileTreeView<Node: Identifiable>: UIView,
     public override func didMoveToWindow() {
         super.didMoveToWindow()
         if window == nil {
-            model.cancelActiveRename()
+            cancelRenameForTeardown()
         }
+    }
+
+    private func cancelRenameForTeardown() {
+        guard let revision = renameRevisionForTeardown else { return }
+        renameRevisionForTeardown = nil
+        model.cancelActiveRename(ifRevision: revision)
     }
 
     /// Reloads mounted row content after caller-owned decoration data changes.
@@ -246,6 +255,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
 
         let shouldRestoreTreeFocus = observedRenamingID != nil && model.activeRenamingID == nil
         observedRenamingID = model.activeRenamingID
+        renameRevisionForTeardown = observedRenamingID == nil ? nil : model.renameRevision
 
         let modelIdentifier = ObjectIdentifier(model)
         let structureChanged = observedModelIdentifier != modelIdentifier
