@@ -39,6 +39,9 @@ let model = try FileTreeModel<FileTreePath>(
 - ``FileTreePathMutation``
 - ``FileTreePathMutationEvent``
 - ``FileTreePathMutationError``
+- ``FileTreeRenameConfiguration``
+- ``FileTreeRenameEvent``
+- ``FileTreeRenameError``
 - ``prepareFileTree(paths:options:)``
 
 ### State and rows
@@ -62,6 +65,7 @@ let model = try FileTreeModel<FileTreePath>(
 ### Updating paths
 
 - <doc:MutatingFileTrees>
+- <doc:RenamingFileTrees>
 
 ### Rendering
 

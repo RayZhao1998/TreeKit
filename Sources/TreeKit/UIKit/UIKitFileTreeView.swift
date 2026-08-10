@@ -27,7 +27,10 @@ public final class FileTreeView<Node: Identifiable>: UIView,
     public var model: FileTreeModel<Node> {
         didSet {
             guard oldValue !== model else { return }
+            oldValue.cancelActiveRename()
             observedModelIdentifier = nil
+            observedRenamingID = nil
+            renameRevisionForTeardown = nil
             lastRevealSequence = nil
             bindToModel()
         }
@@ -60,6 +63,8 @@ public final class FileTreeView<Node: Identifiable>: UIView,
     private var observedDataRevision: UInt64?
     private var observedExpansionRevision: UInt64?
     private var observedSearchRevision: UInt64?
+    private var observedRenamingID: Node.ID?
+    private var renameRevisionForTeardown: UInt64?
     private var visibleIndexByID: [Node.ID: Int] = [:]
     private var lastRevealSequence: UInt64?
 
@@ -123,9 +128,30 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         bindToModel()
     }
 
+    deinit {
+        let model = model
+        guard let renameRevisionForTeardown else { return }
+        Task { @MainActor in
+            model.cancelActiveRename(ifRevision: renameRevisionForTeardown)
+        }
+    }
+
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("FileTreeView does not support initialization from a coder")
+    }
+
+    public override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            cancelRenameForTeardown()
+        }
+    }
+
+    private func cancelRenameForTeardown() {
+        guard let revision = renameRevisionForTeardown else { return }
+        renameRevisionForTeardown = nil
+        model.cancelActiveRename(ifRevision: revision)
     }
 
     /// Reloads mounted row content after caller-owned decoration data changes.
@@ -227,6 +253,10 @@ public final class FileTreeView<Node: Identifiable>: UIView,
 
         normalizeModelSelectionIfNeeded()
 
+        let shouldRestoreTreeFocus = observedRenamingID != nil && model.activeRenamingID == nil
+        observedRenamingID = model.activeRenamingID
+        renameRevisionForTeardown = observedRenamingID == nil ? nil : model.renameRevision
+
         let modelIdentifier = ObjectIdentifier(model)
         let structureChanged = observedModelIdentifier != modelIdentifier
             || observedDataRevision != model.dataRevision
@@ -245,6 +275,10 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         synchronizeCollectionSelection()
         refreshMountedRows()
         consumeRevealRequestIfNeeded()
+        if shouldRestoreTreeFocus {
+            collectionView.becomeFirstResponder()
+            setNeedsFocusUpdate()
+        }
     }
 
     private func normalizeModelSelectionIfNeeded() {
@@ -382,6 +416,17 @@ public final class FileTreeView<Node: Identifiable>: UIView,
                 self?.model.toggleExpansion(of: nodeID)
             }
         )
+        cell.configureRename(
+            id: nodeID,
+            isRenaming: context.isRenaming,
+            value: (row.node as? FileTreePath)?.name ?? "",
+            onCommit: { [weak self] name in
+                self?.model.submitActiveRename(name) ?? false
+            },
+            onCancel: { [weak self] in
+                self?.model.cancelActiveRename()
+            }
+        )
     }
 
     private func visibleRow(at index: Int) -> FileTreeVisibleRow<Node>? {
@@ -405,6 +450,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             isSelected: model.selection.contains(row.id),
             isFocused: model.focusedID == row.id,
             isSearchMatch: model.isSearchMatch(row.id),
+            isRenaming: model.activeRenamingID == row.id,
             segments: row.segments
         )
     }
@@ -432,6 +478,27 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         ) as! UIKitFileTreeCell
         configure(cell, at: indexPath)
         return cell
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        didEndDisplaying cell: UICollectionViewCell,
+        forItemAt indexPath: IndexPath
+    ) {
+        guard let renamingID = model.activeRenamingID,
+              let treeCell = cell as? UIKitFileTreeCell,
+              treeCell.activeRenameID == AnyHashable(renamingID)
+        else { return }
+        guard let currentIndex = visibleIndexByID[renamingID] else {
+            model.cancelActiveRename()
+            return
+        }
+        guard collectionView.cellForItem(
+            at: IndexPath(item: currentIndex, section: indexPath.section)
+        ) == nil else {
+            return
+        }
+        model.cancelActiveRename()
     }
 
     // MARK: - UICollectionViewDelegate
@@ -564,6 +631,7 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
     private let disclosureButton = UIButton(type: .system)
     private let hostedContentView = UIView()
     private let separatorView = UIView()
+    private let renameField = UIKitRenameTextField()
 
     private var renderedContentView: UIView?
     private var onToggleExpansion: (() -> Void)?
@@ -572,6 +640,8 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
     private var appearance: FileTreeAppearance = .sourceList
     private var isFocusedRow = false
     private var showsSeparator = false
+    private(set) var activeRenameID: AnyHashable?
+    private var onCommitRename: ((String) -> Bool)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -595,6 +665,13 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
         contentView.addSubview(disclosureButton)
         contentView.addSubview(hostedContentView)
         contentView.addSubview(separatorView)
+        renameField.isHidden = true
+        renameField.backgroundColor = .systemBackground
+        renameField.borderStyle = .roundedRect
+        renameField.returnKeyType = .done
+        renameField.clearButtonMode = .never
+        renameField.addTarget(self, action: #selector(commitRename), for: .editingDidEndOnExit)
+        contentView.addSubview(renameField)
         updateSelectionAppearance()
     }
 
@@ -622,6 +699,10 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
         disclosureButton.isHidden = true
         separatorView.isHidden = true
         isFocusedRow = false
+        activeRenameID = nil
+        onCommitRename = nil
+        renameField.isHidden = true
+        renameField.onCancel = nil
     }
 
     override func layoutSubviews() {
@@ -668,6 +749,7 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
 
         hostedContentView.frame = contentFrame
         renderedContentView?.frame = hostedContentView.bounds
+        renameField.frame = hostedContentView.frame
 
         let separatorHeight = 1 / max(1, traitCollection.displayScale)
         separatorView.frame = CGRect(
@@ -726,6 +808,41 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
         setNeedsLayout()
     }
 
+    func configureRename<ID: Hashable>(
+        id: ID,
+        isRenaming: Bool,
+        value: String,
+        onCommit: @escaping (String) -> Bool,
+        onCancel: @escaping () -> Void
+    ) {
+        guard isRenaming else {
+            activeRenameID = nil
+            onCommitRename = nil
+            renameField.isHidden = true
+            renameField.onCancel = nil
+            return
+        }
+
+        let nextID = AnyHashable(id)
+        let isStarting = activeRenameID != nextID
+        if isStarting {
+            renameField.text = value
+            activeRenameID = nextID
+        }
+        onCommitRename = onCommit
+        renameField.onCancel = onCancel
+        renameField.isHidden = false
+        contentView.bringSubviewToFront(renameField)
+        setNeedsLayout()
+        if isStarting {
+            Task { @MainActor [weak self] in
+                guard let self, !self.renameField.isHidden else { return }
+                self.renameField.becomeFirstResponder()
+                self.renameField.selectAll(nil)
+            }
+        }
+    }
+
     private func updateSelectionAppearance() {
         let selectionColor: UIColor
         switch appearance {
@@ -747,6 +864,33 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
 
     @objc private func toggleExpansion() {
         onToggleExpansion?()
+    }
+
+    @objc private func commitRename() {
+        if onCommitRename?(renameField.text ?? "") == false {
+            renameField.becomeFirstResponder()
+            renameField.selectAll(nil)
+        }
+    }
+
+}
+
+@MainActor
+private final class UIKitRenameTextField: UITextField {
+    var onCancel: (() -> Void)?
+
+    override var keyCommands: [UIKeyCommand]? {
+        [
+            UIKeyCommand(
+                input: UIKeyCommand.inputEscape,
+                modifierFlags: [],
+                action: #selector(cancelFromKeyboard)
+            )
+        ]
+    }
+
+    @objc private func cancelFromKeyboard() {
+        onCancel?()
     }
 }
 

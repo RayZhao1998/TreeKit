@@ -20,6 +20,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// The focused row identity, if any.
     public private(set) var focusedID: Node.ID?
 
+    internal private(set) var activeRenamingID: Node.ID?
+    internal private(set) var activeRenameError: FileTreeRenameError?
+
     /// Emits the current selection immediately, then only distinct selection changes.
     ///
     /// Use this publisher for sibling UI that does not need to observe unrelated model revisions.
@@ -60,6 +63,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     internal var dataRevision: UInt64 = 0
     internal var expansionRevision: UInt64 = 0
     internal var searchRevision: UInt64 = 0
+    internal var renameRevision: UInt64 = 0
     internal var revealRequest: FileTreeRevealRequest<Node.ID>?
     internal private(set) var renderedExpandedIDs: Set<Node.ID>
 
@@ -78,6 +82,10 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         FileTreePathMutationEvent,
         Never
     >? = nil
+    internal var fileTreeRenameConfiguration: FileTreeRenameConfiguration? = nil
+    internal var fileTreeRenameSubject: PassthroughSubject<FileTreeRenameEvent, Never>? = nil
+    private var activeRenameCommit: ((String) -> Result<Void, FileTreeRenameError>)?
+    private var activeRenameCancel: (() -> Void)?
 
     /// Creates a stable tree model from prepared data.
     public init(
@@ -95,6 +103,8 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         self.expandedIDs = expandedIDs
         self.focusedID = preparedTree.preorderIDs.first { selection.contains($0) }
         self.pathFlattenEmptyDirectories = pathOptions?.flattenEmptyDirectories ?? false
+        self.activeRenamingID = nil
+        self.activeRenameError = nil
         self.visibleRows = Self.makeVisibleRows(
             in: preparedTree,
             expandedIDs: expandedIDs,
@@ -161,6 +171,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         selection nextSelection: Set<Node.ID>,
         focusedID nextFocus: Node.ID?
     ) {
+        clearRenameSession(publishing: false)
         let expansionSourceIDs: Set<Node.ID>
         if pathFlattenEmptyDirectories {
             expansionSourceIDs = nextExpansion.reduce(into: []) { result, expandedID in
@@ -211,6 +222,60 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         let subject = PassthroughSubject<FileTreePathMutationEvent, Never>()
         fileTreePathMutationSubject = subject
         return subject
+    }
+
+    internal func beginRenameSession(
+        id: Node.ID,
+        commit: @escaping (String) -> Result<Void, FileTreeRenameError>,
+        cancel: @escaping () -> Void
+    ) {
+        activeRenamingID = id
+        activeRenameError = nil
+        activeRenameCommit = commit
+        activeRenameCancel = cancel
+        renameRevision &+= 1
+        publishChange()
+    }
+
+    @discardableResult
+    internal func submitActiveRename(_ name: String) -> Bool {
+        guard let activeRenameCommit else { return false }
+        switch activeRenameCommit(name) {
+        case .success:
+            return true
+        case .failure:
+            return false
+        }
+    }
+
+    internal func cancelActiveRename() {
+        guard activeRenamingID != nil else { return }
+        let cancel = activeRenameCancel
+        clearRenameSession(publishing: true)
+        cancel?()
+    }
+
+    internal func cancelActiveRename(ifRevision revision: UInt64) {
+        guard renameRevision == revision else { return }
+        cancelActiveRename()
+    }
+
+    internal func clearRenameSession(publishing: Bool) {
+        let hadSession = activeRenamingID != nil || activeRenameError != nil
+        activeRenamingID = nil
+        activeRenameError = nil
+        activeRenameCommit = nil
+        activeRenameCancel = nil
+        guard hadSession else { return }
+        renameRevision &+= 1
+        guard publishing else { return }
+        publishChange()
+    }
+
+    internal func reportRenameError(_ error: FileTreeRenameError) {
+        activeRenameError = error
+        renameRevision &+= 1
+        publishChange()
     }
 
     private func selectionChangeSubject() -> CurrentValueSubject<Set<Node.ID>, Never> {
@@ -772,14 +837,14 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         }
     }
 
-    private func interactionID(for id: Node.ID) -> Node.ID {
+    internal func interactionID(for id: Node.ID) -> Node.ID {
         if let visibleID = visibleRow(for: id)?.id {
             return visibleID
         }
         return canonicalInteractionID(for: id, visibleIDSet: searchVisibleIDSet)
     }
 
-    private func canonicalInteractionID(
+    internal func canonicalInteractionID(
         for id: Node.ID,
         visibleIDSet: Set<Node.ID>? = nil
     ) -> Node.ID {
@@ -1060,7 +1125,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         publishChange()
     }
 
-    private func publishChange() {
+    internal func publishChange() {
         rememberFocusedVisibleIndex()
         selectionChangesSubject?.send(selection)
         focusChangesSubject?.send(focusedID)

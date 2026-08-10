@@ -25,11 +25,54 @@ struct RenderingAPITests {
         let view = FileTreeView(model: original)
 
         #expect(view.model === original)
+        try original.startRenaming("Original.swift")
+        #expect(original.renamingID == "Original.swift")
         view.model = replacement
         #expect(view.model === replacement)
+        #expect(original.renamingID == nil)
 
         view.reloadRows()
         _ = view.focusTree()
+    }
+
+    @Test
+    func appKitCancelsRenameWhenTheViewDetachesFromItsWindow() throws {
+        let model = try FileTreeModel<FileTreePath>(paths: ["Original.swift"])
+        let view = FileTreeView(model: model)
+        let container = NSView()
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 240),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = container
+        container.addSubview(view)
+        try model.startRenaming("Original.swift")
+        #expect(model.renamingID == "Original.swift")
+
+        view.removeFromSuperview()
+
+        #expect(model.renamingID == nil)
+        _ = window
+    }
+
+    @Test
+    func deferredRendererTeardownDoesNotCancelAReplacementRename() async throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["First.swift", "Second.swift"]
+        )
+        try model.startRenaming("First.swift")
+        #expect(model.renamingID == "First.swift")
+        let staleRevision = model.renameRevision
+        let deferredCleanup = Task { @MainActor in
+            model.cancelActiveRename(ifRevision: staleRevision)
+        }
+
+        try model.startRenaming("Second.swift")
+        await deferredCleanup.value
+
+        #expect(model.renamingID == "Second.swift")
     }
 
     @Test
