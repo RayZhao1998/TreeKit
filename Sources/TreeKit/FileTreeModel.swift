@@ -246,8 +246,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         activeRenameError = nil
         activeRenameCommit = nil
         activeRenameCancel = nil
-        guard publishing, hadSession else { return }
+        guard hadSession else { return }
         renameRevision &+= 1
+        guard publishing else { return }
         publishChange()
     }
 

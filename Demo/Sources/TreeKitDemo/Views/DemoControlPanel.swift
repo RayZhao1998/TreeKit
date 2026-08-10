@@ -32,10 +32,6 @@ struct DemoControlPanel: View {
     self.onReloadNativeRows = onReloadNativeRows
     let observer = DemoEventObserver(model: model)
     _eventObserver = StateObject(wrappedValue: observer)
-    model.configureRenaming(.init(
-      canRename: { !$0.path.hasPrefix(".github/") },
-      onError: { observer.record("Rename error · \($0.localizedDescription)") }
-    ))
   }
 
   var body: some View {
@@ -49,6 +45,14 @@ struct DemoControlPanel: View {
       renameControls
       observationLog
     }
+    .onAppear(perform: configureModel)
+  }
+
+  private func configureModel() {
+    model.configureRenaming(.init(
+      canRename: { !$0.path.hasPrefix(".github/") },
+      onError: { eventObserver.record("Rename error · \($0.localizedDescription)") }
+    ))
   }
 
   private var configurationControls: some View {

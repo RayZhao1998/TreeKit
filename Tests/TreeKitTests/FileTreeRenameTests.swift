@@ -21,10 +21,12 @@ struct FileTreeRenameTests {
         try model.startRenaming("Sources/Feature.swift")
         #expect(model.renamingID == "Sources/Feature.swift")
         #expect(model.focusedID == "Sources/Feature.swift")
+        let activeRenameRevision = model.renameRevision
 
         try model.commitRenaming("Renamed.swift")
 
         #expect(model.renamingID == nil)
+        #expect(model.renameRevision == activeRenameRevision + 1)
         #expect(model.renameError == nil)
         #expect(model.preparedTree.contains("Sources/Renamed.swift"))
         #expect(!model.preparedTree.contains("Sources/Feature.swift"))
@@ -129,6 +131,7 @@ struct FileTreeRenameTests {
         )
         window.contentView = view
         view.layoutSubtreeIfNeeded()
+        let outlineView = try #require(findOutlineView(in: view))
 
         try model.startRenaming("First.swift")
         view.layoutSubtreeIfNeeded()
@@ -137,6 +140,7 @@ struct FileTreeRenameTests {
         _ = commitField.sendAction(commitField.action, to: commitField.target)
         #expect(model.preparedTree.contains("Committed.swift"))
         #expect(model.renamingID == nil)
+        #expect(window.firstResponder === outlineView)
 
         try model.startRenaming("Second.swift")
         view.layoutSubtreeIfNeeded()
