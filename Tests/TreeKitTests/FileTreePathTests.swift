@@ -302,6 +302,31 @@ struct FileTreePathModelTests {
     }
 
     @Test
+    func searchTimeExpansionUsesTheCanonicalFlattenedChain() throws {
+        let prepared = try prepareFileTree(
+            paths: ["Root/Branch/Leaf/File.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+        let model = FileTreeModel(prepared, searchText: \.name)
+
+        model.openSearch(initialQuery: "branch")
+        #expect(model.visibleRows.map(\.id) == ["Root/Branch/"])
+        model.expand("Root/")
+        #expect(model.expandedIDs == ["Root/Branch/Leaf/"])
+
+        model.closeSearch()
+        #expect(model.visibleRows.map(\.id) == [
+            "Root/Branch/Leaf/", "Root/Branch/Leaf/File.swift"
+        ])
+
+        model.openSearch(initialQuery: "branch")
+        model.collapse("Root/")
+        #expect(model.expandedIDs.isEmpty)
+        model.closeSearch()
+        #expect(model.visibleRows.map(\.id) == ["Root/Branch/Leaf/"])
+    }
+
+    @Test
     func flattenedSearchFocusAndNavigationUseUniqueTerminalRows() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: [

@@ -360,7 +360,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Expands one branch. Expanding a hidden descendant records state without forcing ancestors open.
     public func expand(_ id: Node.ID) {
-        let id = interactionID(for: id)
+        let id = canonicalInteractionID(for: id)
         guard preparedTree.isExpandable(id), expandedIDs.insert(id).inserted else { return }
         if hasActiveSearchQuery {
             rebuildVisibleRows()
@@ -374,7 +374,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Collapses one branch while retaining nested descendants' expansion state.
     public func collapse(_ id: Node.ID) {
-        let id = interactionID(for: id)
+        let id = canonicalInteractionID(for: id)
         guard expandedIDs.remove(id) != nil else { return }
         if hasActiveSearchQuery {
             rebuildVisibleRows()
@@ -388,7 +388,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Toggles one branch's expansion state.
     public func toggleExpansion(of id: Node.ID) {
-        let id = interactionID(for: id)
+        let id = canonicalInteractionID(for: id)
         if expandedIDs.contains(id) {
             collapse(id)
         } else {
@@ -400,7 +400,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     public func setExpandedIDs(_ identifiers: Set<Node.ID>) {
         let valid = Set(identifiers.compactMap { id -> Node.ID? in
             guard preparedTree.contains(id) else { return nil }
-            let interactionID = interactionID(for: id)
+            let interactionID = canonicalInteractionID(for: id)
             return preparedTree.isExpandable(interactionID) ? interactionID : nil
         })
         guard valid != expandedIDs else { return }
