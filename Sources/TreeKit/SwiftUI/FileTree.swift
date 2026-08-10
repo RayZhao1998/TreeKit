@@ -9,26 +9,38 @@ import SwiftUI
 public struct FileTreeDefaultRow: View {
     public let node: FileTreePath
     public let segments: [FileTreeRowSegment<String>]
+    public let isExpanded: Bool
+    public let icons: FileTreeIcons
 
-    public init(node: FileTreePath) {
+    public init(
+        node: FileTreePath,
+        isExpanded: Bool = false,
+        icons: FileTreeIcons = .complete
+    ) {
         self.node = node
         self.segments = [
             FileTreeRowSegment(id: node.id, label: node.name, isTerminal: true)
         ]
+        self.isExpanded = isExpanded
+        self.icons = icons
     }
 
     public init(
         node: FileTreePath,
-        segments: [FileTreeRowSegment<String>]
+        segments: [FileTreeRowSegment<String>],
+        isExpanded: Bool = false,
+        icons: FileTreeIcons = .complete
     ) {
         self.node = node
         self.segments = segments
+        self.isExpanded = isExpanded
+        self.icons = icons
     }
 
     public var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: node.kind == .directory ? "folder" : "doc")
-                .foregroundStyle(.secondary)
+            FileTreeIconImage(node: node, isExpanded: isExpanded, icons: icons)
+                .frame(width: 16, height: 16)
             Text(segments.map(\.label).joined(separator: " / "))
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -171,7 +183,12 @@ public extension FileTree where Node == FileTreePath, RowContent == FileTreeDefa
             configuration: configuration,
             onActivate: onActivate
         ) { node, context in
-            FileTreeDefaultRow(node: node, segments: context.segments)
+            FileTreeDefaultRow(
+                node: node,
+                segments: context.segments,
+                isExpanded: context.isExpanded,
+                icons: configuration.icons
+            )
         }
     }
 }

@@ -235,11 +235,9 @@ public extension FileTreeView where Node == FileTreePath {
         model: FileTreeModel<FileTreePath>,
         configuration: FileTreeConfiguration = .init()
     ) {
-        self.init(model: model, configuration: configuration) { node, context, reusableView in
-            let row = (reusableView as? AppKitDefaultFileTreeRowView)
+        self.init(model: model, configuration: configuration) { _, _, reusableView in
+            (reusableView as? AppKitDefaultFileTreeRowView)
                 ?? AppKitDefaultFileTreeRowView()
-            row.update(with: node, segments: context.segments)
-            return row
         }
     }
 }
@@ -592,6 +590,15 @@ private extension FileTreeView {
             cell.identifier = Self.cellIdentifier
             let context = rowContext(for: box.id, in: outlineView)
             let content = owner.rowProvider(node, context, cell.contentView)
+            if let path = node as? FileTreePath,
+               let defaultRow = content as? AppKitDefaultFileTreeRowView {
+                defaultRow.update(
+                    with: path,
+                    segments: context.segments,
+                    isExpanded: context.isExpanded,
+                    icons: owner.configuration.icons
+                )
+            }
             cell.setContentView(content)
             cell.configureRename(
                 id: box.id,
@@ -1109,15 +1116,16 @@ private final class AppKitDefaultFileTreeRowView: NSView {
         fatalError("Use init(frame:)")
     }
 
-    func update(
+    func update<ID: Hashable>(
         with node: FileTreePath,
-        segments: [FileTreeRowSegment<String>]
+        segments: [FileTreeRowSegment<ID>],
+        isExpanded: Bool,
+        icons: FileTreeIcons
     ) {
         nameField.stringValue = segments.map(\.label).joined(separator: " / ")
-        iconView.image = NSImage(
-            systemSymbolName: node.kind == .directory ? "folder" : "doc",
-            accessibilityDescription: node.kind == .directory ? "Folder" : "File"
-        )
+        let resolved = icons.resolve(node, isExpanded: isExpanded)
+        iconView.image = resolved.appKitImage()
+        iconView.contentTintColor = resolved.isTemplate ? .secondaryLabelColor : nil
     }
 }
 #endif

@@ -418,8 +418,18 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         cell.configure(
             context: context,
             configuration: configuration,
-            contentProvider: { [rowProvider] reusableView in
-                rowProvider(row.node, context, reusableView)
+            contentProvider: { [rowProvider, configuration] reusableView in
+                let content = rowProvider(row.node, context, reusableView)
+                if let path = row.node as? FileTreePath,
+                   let defaultRow = content as? UIKitDefaultFileTreeRowView {
+                    defaultRow.update(
+                        with: path,
+                        segments: context.segments,
+                        isExpanded: context.isExpanded,
+                        icons: configuration.icons
+                    )
+                }
+                return content
             },
             onToggleExpansion: { [weak self] in
                 self?.model.toggleExpansion(of: nodeID)
@@ -836,11 +846,9 @@ public extension FileTreeView where Node == FileTreePath {
         model: FileTreeModel<FileTreePath>,
         configuration: FileTreeConfiguration = .init()
     ) {
-        self.init(model: model, configuration: configuration) { node, context, reusableView in
-            let row = (reusableView as? UIKitDefaultFileTreeRowView)
+        self.init(model: model, configuration: configuration) { _, _, reusableView in
+            (reusableView as? UIKitDefaultFileTreeRowView)
                 ?? UIKitDefaultFileTreeRowView()
-            row.update(with: node, segments: context.segments)
-            return row
         }
     }
 }
@@ -1151,12 +1159,16 @@ private final class UIKitDefaultFileTreeRowView: UIView {
         fatalError("UIKitDefaultFileTreeRowView does not support initialization from a coder")
     }
 
-    func update(
+    func update<ID: Hashable>(
         with node: FileTreePath,
-        segments: [FileTreeRowSegment<String>]
+        segments: [FileTreeRowSegment<ID>],
+        isExpanded: Bool,
+        icons: FileTreeIcons
     ) {
         nameLabel.text = segments.map(\.label).joined(separator: " / ")
-        iconView.image = UIImage(systemName: node.kind == .directory ? "folder" : "doc")
+        let resolved = icons.resolve(node, isExpanded: isExpanded)
+        iconView.image = resolved.uiKitImage()
+        iconView.tintColor = resolved.isTemplate ? .secondaryLabel : nil
         accessibilityLabel = segments.map(\.label).joined(separator: " / ")
         accessibilityValue = node.kind == .directory ? "Folder" : "File"
     }

@@ -11,8 +11,17 @@ let package = Package(
     products: [
         .library(name: "TreeKit", targets: ["TreeKit"])
     ],
+    dependencies: [
+        .package(
+            url: "https://github.com/swiftlang/swift-docc-plugin",
+            from: "1.5.0"
+        )
+    ],
     targets: [
-        .target(name: "TreeKit"),
+        .target(
+            name: "TreeKit",
+            resources: [.process("Resources")]
+        ),
         .testTarget(name: "TreeKitTests", dependencies: ["TreeKit"])
     ],
     swiftLanguageModes: [.v6]

@@ -4,10 +4,6 @@ TreeKit is a model-first file-tree rendering component for SwiftUI, AppKit, and 
 It keeps hierarchy work out of row views, uses stable identities for state, and delegates
 viewport reuse, keyboard behavior, and accessibility to native platform controls.
 
-The interface takes its path-first ergonomics and prepared-input boundary from
-[`@pierre/trees`](https://trees.software/). The AppKit renderer follows the same practical
-direction as CodeEdit's project navigator: `NSOutlineView`, native selection, and reusable rows.
-
 ## Requirements
 
 - Swift 6.1+
@@ -16,14 +12,50 @@ direction as CodeEdit's project navigator: `NSOutlineView`, native selection, an
 
 ## Installation
 
-For local development, add this package in Xcode or to `Package.swift`:
+Add the package repository in Xcode, or declare the released package in `Package.swift`:
 
 ```swift
-.package(path: "../TreeKit")
+dependencies: [
+    .package(
+        url: "https://github.com/RayZhao1998/TreeKit.git",
+        from: "1.1.0"
+    )
+],
+targets: [
+    .target(
+        name: "YourTarget",
+        dependencies: [
+            .product(name: "TreeKit", package: "TreeKit")
+        ]
+    )
+]
 ```
 
-After publishing the repository, use its Git URL and a tagged version instead. Add the `TreeKit`
-library product to the target's dependencies.
+In Xcode, choose **File → Add Package Dependencies**, enter
+`https://github.com/RayZhao1998/TreeKit.git`, select **Up to Next Major Version** starting at
+`1.1.0`, and add the `TreeKit` library product to your target.
+
+## Documentation
+
+TreeKit's API reference and guides live in `Sources/TreeKit/TreeKit.docc`. The repository includes
+a GitHub Pages workflow at `.github/workflows/documentation.yml`; after Pages is configured to use
+**GitHub Actions** as its source, every push to `main` can regenerate and deploy the site to:
+
+<https://rayzhao1998.github.io/TreeKit/documentation/treekit/>
+
+Generate the same static site locally with:
+
+```sh
+swift package --allow-writing-to-directory ./docs \
+    generate-documentation --target TreeKit \
+    --disable-indexing \
+    --transform-for-static-hosting \
+    --hosting-base-path TreeKit \
+    --output-path ./docs
+```
+
+The `docs/` output is generated and should not be committed; GitHub Actions uploads it directly as
+a Pages artifact.
 
 ## Demo
 
@@ -127,6 +159,36 @@ FileTree(model: model, onActivate: { item in
     .opacity(context.isSelected ? 1 : 0.92)
 }
 ```
+
+## File-type icons
+
+The default SwiftUI, AppKit, and UIKit rows resolve file-type icons from the vendored
+[`pierrecomputer/vscode-icons`](https://github.com/pierrecomputer/vscode-icons) catalog. The
+complete colored set is enabled by default. Select a smaller monochrome set or disable built-in
+file mappings through the shared configuration:
+
+```swift
+var configuration = FileTreeConfiguration()
+configuration.icons = .standard // .minimal, .complete, or .none
+configuration.icons.colored = false
+```
+
+Applications can override structural icons and match exact basenames, basename substrings, or
+multi-part extensions without replacing the row:
+
+```swift
+configuration.icons.remap[.folder] = .systemSymbol("folder.fill")
+configuration.icons.byFileName["Package.swift"] = .systemSymbol("shippingbox")
+configuration.icons.byFileNameContains[".generated."] = .systemSymbol("gearshape")
+configuration.icons.byFileExtension["spec.ts"] = .builtIn("react")
+configuration.icons.byFileExtension["pdf"] = .asset("ProductPDFIcon")
+```
+
+Keys are case-insensitive. Resolution precedence is exact basename, longest matching basename
+substring, longest extension suffix, built-in mapping, then the generic file icon. Custom
+SwiftUI rows can render the same result with ``FileTreeIconImage``; native code can call
+`configuration.icons.image(for:isExpanded:)`. The original SVG resources, license, and pinned
+upstream revision are recorded in [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 ## AppKit and UIKit: `FileTreeView`
 

@@ -83,6 +83,11 @@ let model = try FileTreeModel<FileTreePath>(
 - ``FileTree``
 - ``FileTreeView``
 - ``FileTreeDefaultRow``
+- ``FileTreeIconImage``
+- ``FileTreeIcons``
+- ``FileTreeIcon``
+- ``FileTreeIconSlot``
+- ``FileTreeBuiltInIconSet``
 - ``FileTreeConfiguration``
 - ``FileTreeSelectionMode``
 - ``FileTreeAppearance``

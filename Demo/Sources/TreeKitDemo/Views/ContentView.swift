@@ -231,7 +231,8 @@ struct ContentView: View {
           CustomFileTreeRow(
             node: node,
             context: context,
-            gitStatus: DemoData.gitStatuses[node.id]
+            gitStatus: DemoData.gitStatuses[node.id],
+            icons: configuration.icons
           )
         }
       }
