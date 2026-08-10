@@ -43,6 +43,7 @@ struct DemoControlPanel: View {
       navigationControls
       mutationControls
       renameControls
+      dragDropControls
       observationLog
     }
     .onAppear(perform: configureModel)
@@ -52,6 +53,14 @@ struct DemoControlPanel: View {
     model.configureRenaming(.init(
       canRename: { !$0.path.hasPrefix(".github/") },
       onError: { eventObserver.record("Rename error · \($0.localizedDescription)") }
+    ))
+    model.configureDragAndDrop(.init(
+      canDrag: { !$0.contains(where: { $0.path.hasPrefix(".github/") }) },
+      canDrop: { proposal in
+        !proposal.destinationPaths.contains(where: { $0.path.hasPrefix(".github/") })
+      },
+      onDropError: { eventObserver.record("Drop error · \($0.error.localizedDescription)") },
+      openOnDropDelay: 0.45
     ))
   }
 
@@ -264,6 +273,29 @@ struct DemoControlPanel: View {
     }
   }
 
+  private var dragDropControls: some View {
+    GroupBox("Native drag and drop") {
+      VStack(alignment: .leading, spacing: 8) {
+        Text("Drag one selected row—or the current multi-selection—between rows. The top, middle, and bottom zones resolve to before, inside, and after; folders expand after a short hover.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
+        HStack(spacing: 7) {
+          Button("Drop focused into Demo folder") {
+            performMutation { try dropFocusedIntoDemoFolder() }
+          }
+          .disabled(model.focusedID == nil)
+
+          Text(".github sources and destinations are protected by Demo policy.")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+      }
+      .controlSize(.small)
+      .padding(.top, 4)
+    }
+  }
+
   private var sourceListAppearanceBinding: Binding<Bool> {
     Binding(
       get: { configuration.appearance == .sourceList },
@@ -402,6 +434,23 @@ struct DemoControlPanel: View {
     }
   }
 
+  private func dropFocusedIntoDemoFolder() throws {
+    guard let focusedID = model.focusedID else { return }
+    let targetPath = "_TreeKitDemo/"
+    if !model.preparedTree.contains(targetPath) {
+      try model.add(targetPath, kind: .directory)
+    }
+    let session = try model.makeDragSession(startingAt: focusedID)
+    try model.performDrop(
+      session,
+      target: .init(
+        path: try FileTreePath(path: targetPath, kind: .directory),
+        position: .inside
+      )
+    )
+    model.expand(targetPath)
+  }
+
   private func performMutation(_ action: () throws -> Void) {
     do {
       try action()
@@ -440,6 +489,17 @@ private final class DemoEventObserver: ObservableObject {
         self?.record("Rename · \(event.sourcePath.path) → \(event.destinationPath.path)")
       }
       .store(in: &cancellables)
+
+    model.dragDropEvents
+      .sink { [weak self] event in
+        switch event {
+        case .completed(let drop):
+          self?.record("Drop · \(drop.moves.count) path(s) → \(drop.proposal.target.demoDescription)")
+        case .failed(let failure):
+          self?.record("Drop error · \(failure.error.localizedDescription)")
+        }
+      }
+      .store(in: &cancellables)
   }
 
   func record(_ event: String) {
@@ -460,5 +520,12 @@ private extension FileTreePathMutationEvent {
     case .batch(let events): "batch \(events.count) operation(s)"
     case .reset(let paths): "reset \(paths.count) explicit path(s)"
     }
+  }
+}
+
+private extension FileTreeDropTarget {
+  var demoDescription: String {
+    let path = path?.path ?? "root"
+    return "\(position.rawValue) \(path)"
   }
 }

@@ -11,6 +11,8 @@ import UIKit
 public final class FileTreeView<Node: Identifiable>: UIView,
     UICollectionViewDataSource,
     UICollectionViewDelegateFlowLayout,
+    UICollectionViewDragDelegate,
+    UICollectionViewDropDelegate,
     UIGestureRecognizerDelegate
 {
     /// Produces the caller-owned content portion of a native row.
@@ -70,6 +72,9 @@ public final class FileTreeView<Node: Identifiable>: UIView,
     private var synchronizationPending = false
     private var lastLayoutDirection: UIUserInterfaceLayoutDirection?
     private var lastCollectionWidth: CGFloat?
+    private var currentDropTarget: FileTreeDropTarget?
+    private var hoveredDropPath: String?
+    private var hoverExpansionTask: Task<Void, Never>?
 
     /// Creates a UIKit tree renderer backed by a stable model.
     public init(
@@ -97,6 +102,9 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         collectionView.keyboardDismissMode = .interactive
         collectionView.dataSource = self
         collectionView.delegate = self
+        collectionView.dragDelegate = self
+        collectionView.dropDelegate = self
+        collectionView.dragInteractionEnabled = true
         collectionView.register(
             UIKitFileTreeCell.self,
             forCellWithReuseIdentifier: UIKitFileTreeCell.reuseIdentifier
@@ -475,6 +483,174 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             return
         }
         model.cancelActiveRename()
+    }
+
+    // MARK: - Native drag and drop
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        itemsForBeginning session: any UIDragSession,
+        at indexPath: IndexPath
+    ) -> [UIDragItem] {
+        guard
+            let pathModel = model as? FileTreeModel<FileTreePath>,
+            let id = visibleRow(at: indexPath.item)?.id as? String,
+            let dragSession = try? pathModel.makeDragSession(startingAt: id)
+        else { return [] }
+
+        return dragSession.sourcePaths.map { path in
+            let item = UIDragItem(itemProvider: NSItemProvider(object: path.path as NSString))
+            item.localObject = dragSession
+            return item
+        }
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        itemsForAddingTo session: any UIDragSession,
+        at indexPath: IndexPath,
+        point: CGPoint
+    ) -> [UIDragItem] {
+        []
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        canHandle session: any UIDropSession
+    ) -> Bool {
+        session.localDragSession != nil
+            && session.items.contains { $0.localObject is FileTreeDragSession }
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        dropSessionDidUpdate session: any UIDropSession,
+        withDestinationIndexPath destinationIndexPath: IndexPath?
+    ) -> UICollectionViewDropProposal {
+        guard
+            let pathModel = model as? FileTreeModel<FileTreePath>,
+            let dragSession = session.items.compactMap({
+                $0.localObject as? FileTreeDragSession
+            }).first,
+            let target = dropTarget(
+                at: session.location(in: collectionView),
+                destinationIndexPath: destinationIndexPath,
+                model: pathModel
+            ),
+            pathModel.canDrop(dragSession, target: target)
+        else {
+            currentDropTarget = nil
+            cancelDropHoverExpansion()
+            return UICollectionViewDropProposal(operation: .forbidden)
+        }
+
+        currentDropTarget = target
+        scheduleDropHoverExpansion(for: target, model: pathModel)
+        let intent: UICollectionViewDropProposal.Intent = target.position == .inside
+            ? .insertIntoDestinationIndexPath
+            : .insertAtDestinationIndexPath
+        return UICollectionViewDropProposal(operation: .move, intent: intent)
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        performDropWith coordinator: any UICollectionViewDropCoordinator
+    ) {
+        defer {
+            currentDropTarget = nil
+            cancelDropHoverExpansion()
+        }
+        guard
+            let pathModel = model as? FileTreeModel<FileTreePath>,
+            let dragSession = coordinator.items.compactMap({
+                $0.dragItem.localObject as? FileTreeDragSession
+            }).first,
+            let target = currentDropTarget
+        else { return }
+
+        do {
+            try pathModel.performDrop(dragSession, target: target)
+            if let destination = coordinator.destinationIndexPath {
+                for item in coordinator.items {
+                    coordinator.drop(item.dragItem, toItemAt: destination)
+                }
+            }
+        } catch {
+            return
+        }
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        dropSessionDidExit session: any UIDropSession
+    ) {
+        currentDropTarget = nil
+        cancelDropHoverExpansion()
+    }
+
+    public func collectionView(
+        _ collectionView: UICollectionView,
+        dropSessionDidEnd session: any UIDropSession
+    ) {
+        currentDropTarget = nil
+        cancelDropHoverExpansion()
+    }
+
+    private func dropTarget(
+        at location: CGPoint,
+        destinationIndexPath: IndexPath?,
+        model: FileTreeModel<FileTreePath>
+    ) -> FileTreeDropTarget? {
+        let proposedIndexPath = destinationIndexPath.flatMap { indexPath in
+            visibleRow(at: indexPath.item) == nil ? nil : indexPath
+        } ?? collectionView.indexPathForItem(at: location)
+        guard let indexPath = proposedIndexPath,
+              let row = visibleRow(at: indexPath.item),
+              let id = row.id as? String,
+              let path = model.preparedTree.node(for: id)
+        else {
+            return .init(path: nil, position: .inside)
+        }
+
+        let frame = collectionView.layoutAttributesForItem(at: indexPath)?.frame
+            ?? collectionView.cellForItem(at: indexPath)?.frame
+            ?? .zero
+        let relativeY = frame.height > 0 ? (location.y - frame.minY) / frame.height : 0.5
+        if path.kind == .directory, relativeY >= 0.25, relativeY <= 0.75 {
+            return .init(path: path, position: .inside)
+        }
+        return .init(path: path, position: relativeY < 0.5 ? .before : .after)
+    }
+
+    private func scheduleDropHoverExpansion(
+        for target: FileTreeDropTarget,
+        model: FileTreeModel<FileTreePath>
+    ) {
+        guard target.position == .inside,
+              let path = target.path,
+              path.kind == .directory,
+              !model.expandedIDs.contains(path.id)
+        else {
+            cancelDropHoverExpansion()
+            return
+        }
+        guard hoveredDropPath != path.id else { return }
+        cancelDropHoverExpansion()
+        hoveredDropPath = path.id
+        let delay = model.dragDropOpenDelay
+        hoverExpansionTask = Task { @MainActor [weak self, weak model] in
+            if delay > 0 {
+                try? await Task.sleep(for: .seconds(delay))
+            }
+            guard let self, self.hoveredDropPath == path.id, let model else { return }
+            model.expand(path.id)
+        }
+    }
+
+    private func cancelDropHoverExpansion() {
+        hoveredDropPath = nil
+        hoverExpansionTask?.cancel()
+        hoverExpansionTask = nil
     }
 
     // MARK: - UICollectionViewDelegate

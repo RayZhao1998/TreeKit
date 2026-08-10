@@ -42,6 +42,16 @@ let model = try FileTreeModel<FileTreePath>(
 - ``FileTreeRenameConfiguration``
 - ``FileTreeRenameEvent``
 - ``FileTreeRenameError``
+- ``FileTreeDragSession``
+- ``FileTreeDropTarget``
+- ``FileTreeDropPosition``
+- ``FileTreeDropProposal``
+- ``FileTreeDropMove``
+- ``FileTreeDropEvent``
+- ``FileTreeDropFailure``
+- ``FileTreeDragDropEvent``
+- ``FileTreeDragDropError``
+- ``FileTreeDragDropConfiguration``
 - ``prepareFileTree(paths:options:)``
 
 ### State and rows
@@ -66,6 +76,7 @@ let model = try FileTreeModel<FileTreePath>(
 
 - <doc:MutatingFileTrees>
 - <doc:RenamingFileTrees>
+- <doc:DraggingFileTrees>
 
 ### Rendering
 

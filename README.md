@@ -293,6 +293,30 @@ restoration. `renameEvents` reports canonical source, destination, and item kind
 TreeKit updates only its in-memory hierarchy. Callers own filesystem persistence, authorization,
 rollback, and how `renameError` is presented to people.
 
+## Native drag and drop
+
+AppKit and UIKit renderers enable native previews, drop indicators, autoscroll, and delayed folder
+expansion. SwiftUI receives the same behavior through its native host. Configure path policy once:
+
+```swift
+model.configureDragAndDrop(.init(
+    canDrag: { paths in !paths.contains { protectedPaths.contains($0.id) } },
+    canDrop: { proposal in policy.accepts(proposal) },
+    onDropComplete: { event in persist(event.moves) },
+    onDropError: { failure in show(failure.error) }
+))
+```
+
+Targets use `before`, `after`, or `inside`. Before/after resolve to the target's parent; inside
+requires a directory, while `inside` with a `nil` target means the forest root. Multi-selection
+drags exclude redundant descendants of selected directories. Successful drops validate all
+destinations first, then install one path-mutation transaction and emit typed completion events;
+failed requests emit typed failure events without changing the tree. Exact sibling reordering uses
+`.inputOrder`; sorted models reapply their chosen sort policy.
+
+TreeKit owns only in-memory intent. Callers still own filesystem moves, authorization, persistence,
+rollback, external drag formats, and error presentation.
+
 ## Model-backed search
 
 Search is shared `FileTreeModel` state, so SwiftUI, AppKit, and UIKit always render the same
@@ -352,6 +376,8 @@ let model = FileTreeModel(
 - Path mutations stage validation away from mounted state, then install one prepared hierarchy and
   visible projection. Batches may validate ordered intermediate hierarchies, but publish only the
   final projection and one semantic event.
+- Drag/drop resolves and validates canonical sources and destinations before mutation, then installs
+  one shared path transaction. Native hover checks do not build a second renderer-owned hierarchy.
 
 The package intentionally does not enumerate the filesystem, watch directories, or persist
 state. The current 1.x model renders an already known hierarchy and can update it through

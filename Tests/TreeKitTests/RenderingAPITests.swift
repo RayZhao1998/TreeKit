@@ -157,6 +157,19 @@ struct RenderingAPITests {
     }
 
     @Test
+    func appKitRegistersTheNativePathDragAndDropSurface() throws {
+        let model = try FileTreeModel<FileTreePath>(paths: ["A.swift", "B.swift"])
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+
+        #expect(
+            outlineView.registeredDraggedTypes.contains(
+                NSPasteboard.PasteboardType("software.trees.TreeKit.paths")
+            )
+        )
+    }
+
+    @Test
     func appKitRestoresAForcedSearchExpansionAfterNativeCollapse() async throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Root/Folder/Target.swift"],
