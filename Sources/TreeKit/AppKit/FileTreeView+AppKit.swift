@@ -58,6 +58,7 @@ public final class FileTreeView<Node: Identifiable>: NSView {
 
         coordinator = Coordinator(owner: self)
         configureHierarchyView()
+        observeViewportChanges()
         applyConfiguration()
         normalizeModelSelectionIfNeeded()
         coordinator.synchronize(forceRowReload: true)
@@ -125,6 +126,20 @@ public final class FileTreeView<Node: Identifiable>: NSView {
             scrollView.topAnchor.constraint(equalTo: topAnchor),
             scrollView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
+    }
+
+    private func observeViewportChanges() {
+        scrollView.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(viewportBoundsDidChange(_:)),
+            name: NSView.boundsDidChangeNotification,
+            object: scrollView.contentView
+        )
+    }
+
+    @objc private func viewportBoundsDidChange(_ notification: Notification) {
+        coordinator.cancelRenameIfOffscreen()
     }
 
     private func applyConfiguration() {
@@ -236,12 +251,14 @@ private extension FileTreeView {
         private var appliedDataRevision: UInt64?
         private var appliedExpansionRevision: UInt64?
         private var appliedSearchRevision: UInt64?
+        private var appliedRenameRevision: UInt64?
         private var requestedExpandedIDs: Set<Node.ID> = []
         private var appliedExpandedIDs: Set<Node.ID> = []
         private var knownNativeExpandedIDs: Set<Node.ID> = []
         private var pendingCollapseIDs: Set<Node.ID> = []
         private var appliedSelection: Set<Node.ID> = []
         private var appliedFocusedID: Node.ID?
+        private var appliedRenamingID: Node.ID?
         private var appliedRevealSequence: UInt64 = 0
         private var isApplyingModelState = false
 
@@ -254,12 +271,14 @@ private extension FileTreeView {
             appliedDataRevision = nil
             appliedExpansionRevision = nil
             appliedSearchRevision = nil
+            appliedRenameRevision = nil
             requestedExpandedIDs = []
             appliedExpandedIDs = []
             knownNativeExpandedIDs = []
             pendingCollapseIDs = []
             appliedSelection = []
             appliedFocusedID = nil
+            appliedRenamingID = nil
             appliedRevealSequence = 0
         }
 
@@ -311,12 +330,33 @@ private extension FileTreeView {
             }
 
             let selectionChangedIDs = appliedSelection.symmetricDifference(owner.model.selection)
-            let focusChangedIDs = Set([appliedFocusedID, owner.model.focusedID].compactMap { $0 })
-            applySelection(to: outlineView)
+            let focusChangedIDs: Set<Node.ID> = appliedFocusedID == owner.model.focusedID
+                ? []
+                : Set([appliedFocusedID, owner.model.focusedID].compactMap { $0 })
+            var renameChangedIDs: Set<Node.ID> = []
+            if appliedRenameRevision != owner.model.renameRevision {
+                if appliedRenamingID != owner.model.activeRenamingID {
+                    renameChangedIDs = Set(
+                        [appliedRenamingID, owner.model.activeRenamingID].compactMap { $0 }
+                    )
+                }
+                let shouldRestoreTreeFocus = appliedRenamingID != nil
+                    && owner.model.activeRenamingID == nil
+                appliedRenamingID = owner.model.activeRenamingID
+                appliedRenameRevision = owner.model.renameRevision
+                if shouldRestoreTreeFocus {
+                    _ = owner.window?.makeFirstResponder(outlineView)
+                }
+            }
+            if dataChanged || searchChanged || !selectionChangedIDs.isEmpty
+                || !focusChangedIDs.isEmpty {
+                applySelection(to: outlineView)
+            }
 
             let rowIDsToReload = expansionChangedIDs
                 .union(selectionChangedIDs)
                 .union(focusChangedIDs)
+                .union(renameChangedIDs)
             if forceRowReload || dataChanged || searchChanged {
                 reloadMountedRows()
             } else if !rowIDsToReload.isEmpty {
@@ -352,6 +392,22 @@ private extension FileTreeView {
                 forRowIndexes: IndexSet(indexes),
                 columnIndexes: IndexSet(integer: 0)
             )
+        }
+
+        func cancelRenameIfOffscreen() {
+            guard let owner, let id = owner.model.activeRenamingID else { return }
+            guard let box = boxesByID[id] else {
+                owner.model.cancelActiveRename()
+                return
+            }
+            let row = owner.outlineView.row(forItem: box)
+            let mountedRows = owner.outlineView.rows(in: owner.outlineView.visibleRect)
+            guard row >= 0, mountedRows.location != NSNotFound,
+                  NSLocationInRange(row, mountedRows)
+            else {
+                owner.model.cancelActiveRename()
+                return
+            }
         }
 
         func outlineView(
@@ -392,7 +448,44 @@ private extension FileTreeView {
             let context = rowContext(for: box.id, in: outlineView)
             let content = owner.rowProvider(node, context, cell.contentView)
             cell.setContentView(content)
+            cell.configureRename(
+                id: box.id,
+                isRenaming: context.isRenaming,
+                value: (node as? FileTreePath)?.name ?? "",
+                onCommit: { [weak owner] name in
+                    owner?.model.submitActiveRename(name) ?? false
+                },
+                onCancel: { [weak owner] in
+                    owner?.model.cancelActiveRename()
+                }
+            )
             return cell
+        }
+
+        func outlineView(
+            _ outlineView: NSOutlineView,
+            didRemove rowView: NSTableRowView,
+            forRow row: Int
+        ) {
+            guard
+                let owner,
+                let cell = rowView.view(atColumn: 0) as? AppKitTreeRowHostCell,
+                let id = cell.activeRenameID?.base as? Node.ID,
+                owner.model.activeRenamingID == id
+            else { return }
+
+            Task { @MainActor [weak self] in
+                guard let self, let owner = self.owner,
+                      owner.model.activeRenamingID == id else { return }
+                guard let currentBox = self.boxesByID[id] else {
+                    owner.model.cancelActiveRename()
+                    return
+                }
+                let currentRow = outlineView.row(forItem: currentBox)
+                if currentRow < 0 || outlineView.rowView(atRow: currentRow, makeIfNecessary: false) == nil {
+                    owner.model.cancelActiveRename()
+                }
+            }
         }
 
         func outlineView(_ outlineView: NSOutlineView, heightOfRowByItem item: Any) -> CGFloat {
@@ -492,6 +585,7 @@ private extension FileTreeView {
                 isSelected: owner.model.selection.contains(id),
                 isFocused: owner.model.focusedID == id,
                 isSearchMatch: owner.model.isSearchMatch(id),
+                isRenaming: owner.model.activeRenamingID == id,
                 segments: projectedRow?.segments ?? [
                     FileTreeRowSegment(
                         id: id,
@@ -624,6 +718,25 @@ private extension FileTreeView {
 @MainActor
 private final class AppKitTreeRowHostCell: NSTableCellView {
     private(set) var contentView: NSView?
+    private let renameField = AppKitRenameTextField()
+    private(set) var activeRenameID: AnyHashable?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        renameField.translatesAutoresizingMaskIntoConstraints = false
+        renameField.isHidden = true
+        addSubview(renameField)
+        NSLayoutConstraint.activate([
+            renameField.leadingAnchor.constraint(equalTo: leadingAnchor),
+            renameField.trailingAnchor.constraint(equalTo: trailingAnchor),
+            renameField.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("Use init(frame:)")
+    }
 
     func setContentView(_ view: NSView) {
         guard contentView !== view else { return }
@@ -631,6 +744,7 @@ private final class AppKitTreeRowHostCell: NSTableCellView {
         contentView = view
         view.translatesAutoresizingMaskIntoConstraints = false
         addSubview(view)
+        addSubview(renameField, positioned: .above, relativeTo: view)
         NSLayoutConstraint.activate([
             view.leadingAnchor.constraint(equalTo: leadingAnchor),
             view.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -639,8 +753,76 @@ private final class AppKitTreeRowHostCell: NSTableCellView {
         ])
     }
 
+    func configureRename<ID: Hashable>(
+        id: ID,
+        isRenaming: Bool,
+        value: String,
+        onCommit: @escaping (String) -> Bool,
+        onCancel: @escaping () -> Void
+    ) {
+        guard isRenaming else {
+            activeRenameID = nil
+            renameField.isHidden = true
+            renameField.onCommit = nil
+            renameField.onCancel = nil
+            return
+        }
+
+        let nextID = AnyHashable(id)
+        if activeRenameID != nextID {
+            renameField.stringValue = value
+            activeRenameID = nextID
+        }
+        renameField.representedID = nextID
+        renameField.onCommit = onCommit
+        renameField.onCancel = onCancel
+        renameField.isHidden = false
+        renameField.selectText(nil)
+        Task { @MainActor [weak self] in
+            guard let self, !self.renameField.isHidden else { return }
+            _ = self.window?.makeFirstResponder(self.renameField)
+        }
+    }
+
     override func prepareForReuse() {
         super.prepareForReuse()
+        activeRenameID = nil
+        renameField.isHidden = true
+        renameField.onCommit = nil
+        renameField.onCancel = nil
+    }
+}
+
+@MainActor
+private final class AppKitRenameTextField: NSTextField {
+    var representedID: AnyHashable?
+    var onCommit: ((String) -> Bool)?
+    var onCancel: (() -> Void)?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        isBordered = true
+        isBezeled = true
+        bezelStyle = .roundedBezel
+        target = self
+        action = #selector(commitRename)
+        focusRingType = .default
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("Use init(frame:)")
+    }
+
+    override func cancelOperation(_ sender: Any?) {
+        onCancel?()
+    }
+
+    @objc private func commitRename() {
+        if onCommit?(stringValue) == false {
+            selectText(nil)
+            _ = window?.makeFirstResponder(self)
+        }
     }
 }
 

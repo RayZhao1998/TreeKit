@@ -270,6 +270,29 @@ Subscribe through `mutationEvents`, or use `onMutation(_:handler:)` to filter by
 or adjacent UI. TreeKit never creates, deletes, or moves filesystem entries; the caller owns that
 side effect and any rollback policy.
 
+## Inline rename
+
+Configure caller policy once, then start from a canonical ID or the focused row:
+
+```swift
+model.configureRenaming(.init(
+    canRename: { !protectedPaths.contains($0.id) },
+    onRename: { event in persist(event) },
+    onError: { error in show(error) }
+))
+
+try model.startRenaming("Sources/Old.swift")
+// The native row editor commits with Return and cancels with Escape.
+```
+
+`commitRenaming(_:)` validates a single same-parent component, rejects duplicate destinations,
+and completes through the existing move transaction. `cancelRenaming()` leaves the hierarchy
+unchanged. AppKit, UIKit, and SwiftUI-hosted custom rows share the same native editor and focus
+restoration. `renameEvents` reports canonical source, destination, and item kind.
+
+TreeKit updates only its in-memory hierarchy. Callers own filesystem persistence, authorization,
+rollback, and how `renameError` is presented to people.
+
 ## Model-backed search
 
 Search is shared `FileTreeModel` state, so SwiftUI, AppKit, and UIKit always render the same

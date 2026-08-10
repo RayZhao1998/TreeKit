@@ -121,6 +121,8 @@ public struct FileTreeRowContext<ID: Hashable> {
     public let isSelected: Bool
     public let isFocused: Bool
     public let isSearchMatch: Bool
+    /// Whether this row currently owns the shared inline-rename editor.
+    public let isRenaming: Bool
     public let segments: [FileTreeRowSegment<ID>]
 
     /// Every canonical identity represented by the row.
@@ -144,6 +146,7 @@ public struct FileTreeRowContext<ID: Hashable> {
         isSelected: Bool,
         isFocused: Bool,
         isSearchMatch: Bool,
+        isRenaming: Bool = false,
         segments: [FileTreeRowSegment<ID>]
     ) {
         self.id = id
@@ -157,6 +160,7 @@ public struct FileTreeRowContext<ID: Hashable> {
         self.isSelected = isSelected
         self.isFocused = isFocused
         self.isSearchMatch = isSearchMatch
+        self.isRenaming = isRenaming
         self.segments = segments
     }
 }

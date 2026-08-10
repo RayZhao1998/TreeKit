@@ -30,7 +30,12 @@ struct DemoControlPanel: View {
     _rowStyle = rowStyle
     self.onFocusNativeTree = onFocusNativeTree
     self.onReloadNativeRows = onReloadNativeRows
-    _eventObserver = StateObject(wrappedValue: DemoEventObserver(model: model))
+    let observer = DemoEventObserver(model: model)
+    _eventObserver = StateObject(wrappedValue: observer)
+    model.configureRenaming(.init(
+      canRename: { !$0.path.hasPrefix(".github/") },
+      onError: { observer.record("Rename error · \($0.localizedDescription)") }
+    ))
   }
 
   var body: some View {
@@ -41,6 +46,7 @@ struct DemoControlPanel: View {
       configurationControls
       navigationControls
       mutationControls
+      renameControls
       observationLog
     }
   }
@@ -215,6 +221,45 @@ struct DemoControlPanel: View {
     }
   }
 
+  private var renameControls: some View {
+    GroupBox("Inline rename") {
+      VStack(alignment: .leading, spacing: 8) {
+        HStack(spacing: 7) {
+          Button("Rename focused") {
+            performMutation { try model.startRenaming() }
+          }
+          .disabled(model.focusedID == nil || model.renamingID != nil)
+
+          Button("Cancel") {
+            model.cancelRenaming()
+          }
+          .disabled(model.renamingID == nil)
+
+          Button("Try invalid name") {
+            performMutation { try model.commitRenaming("invalid/name") }
+          }
+          .disabled(model.renamingID == nil)
+        }
+
+        Text("Enter commits and Escape cancels in the native row editor. .github paths are protected by the Demo policy.")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+
+        if let error = model.renameError {
+          Label(error.localizedDescription, systemImage: "exclamationmark.triangle.fill")
+            .font(.caption)
+            .foregroundStyle(.red)
+        } else if let renamingID = model.renamingID {
+          Label("Editing \(renamingID)", systemImage: "pencil")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+      }
+      .controlSize(.small)
+      .padding(.top, 4)
+    }
+  }
+
   private var sourceListAppearanceBinding: Binding<Bool> {
     Binding(
       get: { configuration.appearance == .sourceList },
@@ -383,6 +428,12 @@ private final class DemoEventObserver: ObservableObject {
     model.mutationEvents
       .sink { [weak self] event in
         self?.record("Mutation · \(event.demoDescription)")
+      }
+      .store(in: &cancellables)
+
+    model.renameEvents
+      .sink { [weak self] event in
+        self?.record("Rename · \(event.sourcePath.path) → \(event.destinationPath.path)")
       }
       .store(in: &cancellables)
   }
