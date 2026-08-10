@@ -89,14 +89,16 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     ) {
         let selection = initialSelection.filtering { preparedTree.contains($0) }
         let expandedIDs = Self.expandedIDs(for: initialExpansion, in: preparedTree)
+        let pathOptions = (preparedTree as? PreparedTree<FileTreePath>)?.fileTreePathOptions
         self.preparedTree = preparedTree
         self.selection = selection
         self.expandedIDs = expandedIDs
         self.focusedID = preparedTree.preorderIDs.first { selection.contains($0) }
+        self.pathFlattenEmptyDirectories = pathOptions?.flattenEmptyDirectories ?? false
         self.visibleRows = Self.makeVisibleRows(
             in: preparedTree,
             expandedIDs: expandedIDs,
-            flattenEmptyDirectories: false
+            flattenEmptyDirectories: pathOptions?.flattenEmptyDirectories ?? false
         )
         self.searchQuery = ""
         self.matchingIDs = []
@@ -106,6 +108,15 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         self.searchText = searchText
         self.lastFocusedVisibleIndex = nil
         rebuildVisibleIndex()
+        if pathFlattenEmptyDirectories {
+            self.selection = Set(selection.map { interactionID(for: $0) })
+            self.expandedIDs = Set(expandedIDs.map { interactionID(for: $0) }).filtering {
+                preparedTree.isExpandable($0)
+            }
+            self.focusedID = focusedID.map { interactionID(for: $0) }
+            self.renderedExpandedIDs = self.expandedIDs
+            rebuildVisibleRows()
+        }
         rememberFocusedVisibleIndex()
     }
 
@@ -737,7 +748,15 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     private func interactionID(for id: Node.ID) -> Node.ID {
-        visibleRow(for: id)?.id ?? id
+        if let visibleID = visibleRow(for: id)?.id {
+            return visibleID
+        }
+        return Self.flattenedDirectoryChain(
+            startingAt: id,
+            in: preparedTree,
+            visibleIDSet: searchVisibleIDSet,
+            enabled: pathFlattenEmptyDirectories
+        ).last ?? id
     }
 
     internal func setPathFlattenEmptyDirectories(
@@ -826,6 +845,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         searchQuery = normalizedQuery
         refreshSearchMatches(selectingFallbackFocus: true)
         rebuildVisibleRows()
+        normalizeSearchFocusIfNeeded()
         expansionRevision &+= 1
         searchRevision &+= 1
         publishChange()
@@ -861,6 +881,18 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
            !matchingIDs.isEmpty,
            focusedID.map(matchingIDSet.contains) != true {
             focusedID = matchingIDs[0]
+        }
+    }
+
+    private func normalizeSearchFocusIfNeeded() {
+        guard hasActiveSearchQuery else { return }
+        let visibleMatchIDs = visibleSearchMatchIDs()
+        guard !visibleMatchIDs.isEmpty else { return }
+        if let focusedID, let row = visibleRow(for: focusedID),
+           row.representedIDs.contains(where: matchingIDSet.contains) {
+            self.focusedID = row.id
+        } else {
+            focusedID = visibleMatchIDs[0]
         }
     }
 
@@ -909,16 +941,17 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     private func focusSearchMatch(offset: Int) {
-        guard !matchingIDs.isEmpty else { return }
-        let currentIndex = focusedID.flatMap { matchingIDs.firstIndex(of: $0) }
+        let visibleMatchIDs = visibleSearchMatchIDs()
+        guard !visibleMatchIDs.isEmpty else { return }
+        let currentIndex = focusedID.flatMap { visibleMatchIDs.firstIndex(of: $0) }
         let nextIndex: Int
         if let currentIndex {
-            nextIndex = min(matchingIDs.count - 1, max(0, currentIndex + offset))
+            nextIndex = min(visibleMatchIDs.count - 1, max(0, currentIndex + offset))
         } else {
-            nextIndex = offset > 0 ? 0 : matchingIDs.count - 1
+            nextIndex = offset > 0 ? 0 : visibleMatchIDs.count - 1
         }
 
-        let nextID = matchingIDs[nextIndex]
+        let nextID = visibleMatchIDs[nextIndex]
         guard focusedID != nextID else { return }
         focusedID = nextID
         revealSequence &+= 1
@@ -929,6 +962,17 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             focus: true
         )
         publishChange()
+    }
+
+    private func visibleSearchMatchIDs() -> [Node.ID] {
+        var seen: Set<Node.ID> = []
+        seen.reserveCapacity(matchingIDs.count)
+        return matchingIDs.compactMap { matchingID in
+            guard let id = visibleRow(for: matchingID)?.id, seen.insert(id).inserted else {
+                return nil
+            }
+            return id
+        }
     }
 
     private static func normalizeSearchQuery(_ query: String) -> String {

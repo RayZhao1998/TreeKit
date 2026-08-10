@@ -232,6 +232,74 @@ struct FileTreePathModelTests {
     }
 
     @Test
+    func hiddenFlattenedSegmentsResolveToTheirCanonicalTerminalRow() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Hidden/Deep/Leaf/File.swift",
+                "Root/Sibling.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+
+        #expect(model.visibleRows.map(\.id) == ["Root/"])
+        model.select("Root/Hidden/")
+        model.expand("Root/Hidden/Deep/")
+        #expect(model.selection == ["Root/Hidden/Deep/Leaf/"])
+        #expect(model.expandedIDs.contains("Root/Hidden/Deep/Leaf/"))
+
+        model.reveal("Root/Hidden/", position: .center)
+        #expect(model.focusedID == "Root/Hidden/Deep/Leaf/")
+        #expect(model.visibleRow(for: "Root/Hidden/")?.id == "Root/Hidden/Deep/Leaf/")
+        #expect(model.visibleRows.map(\.id).contains("Root/Hidden/Deep/Leaf/File.swift"))
+    }
+
+    @Test
+    func flattenedSearchFocusAndNavigationUseUniqueTerminalRows() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Branch/Leaf/Target.swift",
+                "Root/Other.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+
+        model.openSearch(initialQuery: "branch")
+        #expect(model.matchingIDs == [
+            "Root/Branch/", "Root/Branch/Leaf/", "Root/Branch/Leaf/Target.swift"
+        ])
+        #expect(model.focusedID == "Root/Branch/Leaf/")
+
+        model.focusNextSearchMatch()
+        #expect(model.focusedID == "Root/Branch/Leaf/Target.swift")
+        #expect(model.revealRequest?.id == "Root/Branch/Leaf/Target.swift")
+
+        model.focusPreviousSearchMatch()
+        #expect(model.focusedID == "Root/Branch/Leaf/")
+        #expect(model.revealRequest?.id == "Root/Branch/Leaf/")
+    }
+
+    @Test
+    func preparedPathInputRetainsFlatteningProjectionOptions() throws {
+        let prepared = try prepareFileTree(
+            paths: ["Root/Branch/Leaf/File.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+        let model = FileTreeModel(
+            prepared,
+            initialExpansion: .identifiers(["Root/"]),
+            initialSelection: ["Root/"]
+        )
+
+        #expect(model.flattenEmptyDirectories)
+        #expect(model.visibleRows.map(\.id) == [
+            "Root/Branch/Leaf/", "Root/Branch/Leaf/File.swift"
+        ])
+        #expect(model.selection == ["Root/Branch/Leaf/"])
+        #expect(model.focusedID == "Root/Branch/Leaf/")
+        #expect(model.expandedIDs == ["Root/Branch/Leaf/"])
+    }
+
+    @Test
     func createsAModelDirectlyFromPaths() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Sources/App.swift", "README.md"],

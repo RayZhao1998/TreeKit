@@ -107,7 +107,7 @@ internal struct FileTreePathMutationState {
         // Prepared input has no provenance bit for synthesized ancestors, so retain every node.
         // Input order preserves the hierarchy's current root and sibling ordering.
         self.explicitPaths = preparedTree.nodes.map(\.path)
-        self.options = .init(sort: .inputOrder)
+        self.options = preparedTree.fileTreePathOptions ?? .init(sort: .inputOrder)
     }
 }
 

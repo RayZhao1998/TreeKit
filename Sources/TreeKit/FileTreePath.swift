@@ -192,9 +192,11 @@ public func prepareFileTree(
     }
 
     let roots = (childPathsByParent[""] ?? []).compactMap { entriesByLogicalPath[$0] }
-    return try PreparedTree(roots: roots) { node in
+    var preparedTree = try PreparedTree(roots: roots) { node in
         childrenByID[node.id] ?? []
     }
+    preparedTree.fileTreePathOptions = options
+    return preparedTree
 }
 
 public extension FileTreeModel where Node == FileTreePath {
