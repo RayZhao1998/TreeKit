@@ -552,6 +552,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         currentDropTarget = target
         scheduleDropHoverExpansion(for: target, model: pathModel)
         let intent: UICollectionViewDropProposal.Intent = target.position == .inside
+            && target.path != nil
             ? .insertIntoDestinationIndexPath
             : .insertAtDestinationIndexPath
         return UICollectionViewDropProposal(operation: .move, intent: intent)
