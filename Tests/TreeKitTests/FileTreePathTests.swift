@@ -763,6 +763,28 @@ struct FileTreePathModelTests {
     }
 
     @Test
+    func genericResetPreservesExpansionThroughAChangedFlattenedTerminal() throws {
+        let initialTree = try prepareFileTree(
+            paths: ["Root/Branch/Leaf/File.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+        let model = FileTreeModel(initialTree)
+        model.expand("Root/")
+        #expect(model.expandedIDs == ["Root/Branch/Leaf/"])
+
+        let replacementTree = try prepareFileTree(
+            paths: ["Root/Branch/New/File.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+        model.reset(replacementTree)
+
+        #expect(model.expandedIDs == ["Root/Branch/New/"])
+        #expect(model.visibleRows.map(\.id) == [
+            "Root/Branch/New/", "Root/Branch/New/File.swift"
+        ])
+    }
+
+    @Test
     func activeSearchRefreshesAfterMutations() throws {
         let model = try FileTreeModel<FileTreePath>(paths: ["Root/Existing.swift"])
         model.openSearch(initialQuery: "new")
