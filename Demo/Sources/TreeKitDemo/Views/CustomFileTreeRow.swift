@@ -19,6 +19,20 @@ struct CustomFileTreeRow: View {
 
       Spacer(minLength: 8)
 
+      if context.isSearchMatch {
+        Image(systemName: "magnifyingglass.circle.fill")
+          .font(.system(size: 10))
+          .foregroundStyle(.secondary)
+          .help("Search match")
+      }
+
+      if context.isFocused {
+        Image(systemName: "keyboard")
+          .font(.system(size: 10))
+          .foregroundStyle(.tint)
+          .help("Focused command target")
+      }
+
       if let gitStatus {
         Text(gitStatus.rawValue)
           .font(.system(size: 10, weight: .bold, design: .rounded))

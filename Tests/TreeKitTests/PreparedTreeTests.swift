@@ -1,3 +1,4 @@
+import Combine
 import Testing
 @testable import TreeKit
 
@@ -419,5 +420,202 @@ struct FileTreeModelTests {
 
         model.expand("root")
         #expect(model.expansionRevision == expansionRevision + 1)
+    }
+
+    @Test
+    func visibleFocusTraversalRespectsCollapsedBranchesRootsAndBoundaries() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "root",
+                    children: [
+                        TestNode(
+                            id: "folder",
+                            children: [TestNode(id: "hidden")]
+                        ),
+                        TestNode(id: "sibling")
+                    ]
+                ),
+                TestNode(id: "tail")
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(
+            tree,
+            initialExpansion: .identifiers(["root"])
+        )
+
+        #expect(model.visibleRows.map(\.id) == ["root", "folder", "sibling", "tail"])
+        #expect(model.focusNextItem() == "root")
+        #expect(model.focusNextItem() == "folder")
+        #expect(model.focusNextItem() == "sibling")
+        #expect(model.focusPreviousItem() == "folder")
+        #expect(model.focusParentItem() == "root")
+        #expect(model.focusPreviousItem() == "root")
+        #expect(model.focusLastItem() == "tail")
+        let boundaryRevealSequence = try #require(model.revealRequest?.sequence)
+        #expect(model.focusNextItem() == "tail")
+        #expect(model.revealRequest?.sequence == boundaryRevealSequence + 1)
+        #expect(model.revealRequest?.id == "tail")
+        #expect(model.revealRequest?.focus == true)
+
+        model.expand("folder")
+        model.focus("folder")
+        #expect(model.focusNextItem() == "hidden")
+        #expect(model.selection.isEmpty)
+    }
+
+    @Test
+    func focusNearestRecoversHiddenRemovedAndEmptyFocus() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "root",
+                    children: [
+                        TestNode(
+                            id: "folder",
+                            children: [TestNode(id: "focused")]
+                        ),
+                        TestNode(id: "other")
+                    ]
+                )
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(tree, initialExpansion: .expanded)
+
+        model.focus("focused")
+        model.collapse("folder")
+        #expect(model.focusNearestItem() == "folder")
+
+        model.expand("folder")
+        model.focus("focused")
+        let replacement = try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "root",
+                    children: [TestNode(id: "other"), TestNode(id: "tail")]
+                )
+            ],
+            children: \.children
+        )
+        model.reset(replacement)
+
+        #expect(model.focusedID == nil)
+        #expect(model.focusNearestItem(to: "focused") == "tail")
+
+        let emptyTree = try PreparedTree<TestNode>(roots: [], children: \.children)
+        model.reset(emptyTree)
+        #expect(model.focusFirstItem() == nil)
+        #expect(model.focusNearestItem() == nil)
+        #expect(model.focusedID == nil)
+    }
+
+    @Test
+    func navigationFollowsTheActiveSearchProjection() throws {
+        let model = FileTreeModel(try makeSearchTree())
+        model.openSearch(initialQuery: "logger")
+
+        #expect(
+            model.visibleRows.map(\.id)
+                == ["Sources/", "Sources/Support/", "Sources/Support/Logger.swift"]
+        )
+        #expect(model.focusFirstItem() == "Sources/")
+        #expect(model.focusNextItem() == "Sources/Support/")
+        #expect(model.focusLastItem() == "Sources/Support/Logger.swift")
+        #expect(model.focusParentItem() == "Sources/Support/")
+    }
+
+    @Test
+    func scrollAndRevealCanPreserveSelectionAndFocusIndependently() throws {
+        let tree = try PreparedTree(
+            roots: [
+                TestNode(
+                    id: "root",
+                    children: [TestNode(id: "selected"), TestNode(id: "target")]
+                )
+            ],
+            children: \.children
+        )
+        let model = FileTreeModel(tree, initialSelection: ["selected"])
+
+        model.scrollTo("target", position: .center, focus: false)
+        #expect(model.selection == ["selected"])
+        #expect(model.focusedID == "selected")
+        #expect(model.expandedIDs == ["root"])
+
+        model.scrollTo("target")
+        #expect(model.selection == ["selected"])
+        #expect(model.focusedID == "target")
+
+        model.reveal("selected", select: false, focus: false)
+        #expect(model.selection == ["selected"])
+        #expect(model.focusedID == "target")
+    }
+
+    @Test
+    func revealRejectsTargetsExcludedByActiveSearch() throws {
+        let model = FileTreeModel(
+            try makeSearchTree(),
+            initialSelection: ["README.md"]
+        )
+        model.openSearch(initialQuery: "logger")
+        let focusedID = model.focusedID
+        let selection = model.selection
+        let revision = model.revision
+
+        model.scrollTo("Tests/AppTests.swift")
+        model.reveal("Tests/AppTests.swift")
+
+        #expect(model.visibleRow(for: "Tests/AppTests.swift") == nil)
+        #expect(model.focusedID == focusedID)
+        #expect(model.selection == selection)
+        #expect(model.revealRequest == nil)
+        #expect(model.revision == revision)
+    }
+
+    @Test
+    func revealExpandsCollapsedTargetsDuringExpandMatchesSearch() throws {
+        let model = FileTreeModel(try makeSearchTree())
+        model.setSearchMode(.expandMatches)
+        model.openSearch(initialQuery: "logger")
+
+        #expect(model.visibleRow(for: "Tests/AppTests.swift") == nil)
+
+        model.reveal("Tests/AppTests.swift", position: .center)
+
+        #expect(model.expandedIDs.contains("Tests/"))
+        #expect(model.visibleRow(for: "Tests/AppTests.swift") != nil)
+        #expect(model.selection == ["Tests/AppTests.swift"])
+        #expect(model.focusedID == "Tests/AppTests.swift")
+        #expect(model.revealRequest?.id == "Tests/AppTests.swift")
+    }
+
+    @Test
+    func scopedInteractionPublishersIgnoreUnrelatedRevisions() throws {
+        let tree = try PreparedTree(
+            roots: [TestNode(id: "root", children: [TestNode(id: "child")])],
+            children: \.children
+        )
+        let model = FileTreeModel(tree)
+        var selectionValues: [Set<String>] = []
+        var focusValues: [String?] = []
+        let selectionSubscription = model.selectionChanges.sink {
+            selectionValues.append($0)
+        }
+        let focusSubscription = model.focusChanges.sink {
+            focusValues.append($0)
+        }
+
+        model.expand("root")
+        model.focus("root")
+        model.focus("root")
+        model.select("child")
+        model.collapse("root")
+
+        #expect(selectionValues == [[], ["child"]])
+        #expect(focusValues == [nil, "root", "child"])
+        _ = selectionSubscription
+        _ = focusSubscription
     }
 }

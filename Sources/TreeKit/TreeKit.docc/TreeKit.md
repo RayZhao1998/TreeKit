@@ -50,6 +50,10 @@ let model = try FileTreeModel<FileTreePath>(
 - ``FileTreeSearchMode``
 - ``FileTreeScrollPosition``
 
+### Navigation and interaction
+
+- <doc:NavigatingFileTrees>
+
 ### Updating paths
 
 - <doc:MutatingFileTrees>

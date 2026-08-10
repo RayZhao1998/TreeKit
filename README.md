@@ -183,6 +183,42 @@ model.reset(nextPreparedTree)
 Selection and expansion survive `reset` for retained identities by default. Removed identities
 are pruned atomically before the mounted renderer observes the new data.
 
+## Visible navigation and interaction observation
+
+Focus and selection are related but independent. Command handlers can move focus through the
+current visible projection without selecting rows or reading native row indexes:
+
+```swift
+model.focusFirstItem()
+model.focusNextItem()
+model.focusPreviousItem()
+model.focusParentItem()
+model.focusLastItem()
+model.focusNearestItem(to: preferredID)
+
+model.scrollTo(id, position: .center, focus: true) // Does not select.
+model.scrollTo(id, focus: false)                   // Scroll only.
+```
+
+Traversal follows the active expansion and search projection. Next and previous clamp at the
+visible boundaries. Nearest focus chooses the requested visible row, its closest visible ancestor,
+or the last retained visible position when an item was removed. Scroll and reveal requests for an
+identity excluded by the active search projection are ignored without changing focus or selection.
+
+Sibling SwiftUI, AppKit, and UIKit state can subscribe without observing unrelated revisions:
+
+```swift
+let selectionSubscription = model.selectionChanges.sink { selection in
+    updateInspector(selection)
+}
+let focusSubscription = model.focusChanges.sink { focusedID in
+    updateCommandTarget(focusedID)
+}
+```
+
+Both publishers emit their current value on subscription and then only distinct changes. Native
+pointer and keyboard interactions write through the same model state as programmatic navigation.
+
 ## Incremental path mutations
 
 `FileTreeModel<FileTreePath>` also exposes the path-first mutation vocabulary used by

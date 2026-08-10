@@ -1,5 +1,6 @@
 #if canImport(AppKit)
 import AppKit
+import Combine
 import SwiftUI
 import Testing
 @testable import TreeKit
@@ -145,6 +146,33 @@ struct RenderingAPITests {
 
         try model.remove("Root/Existing.swift")
         #expect(outlineView.numberOfRows == 2)
+    }
+
+    @Test
+    func appKitNativeSelectionSynchronizesScopedInteractionState() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["First.swift", "Second.swift"],
+            options: .init(sort: .inputOrder)
+        )
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+        var selections: [Set<String>] = []
+        var focuses: [String?] = []
+        let selectionSubscription = model.selectionChanges.dropFirst().sink {
+            selections.append($0)
+        }
+        let focusSubscription = model.focusChanges.dropFirst().sink {
+            focuses.append($0)
+        }
+
+        outlineView.selectRowIndexes(IndexSet(integer: 1), byExtendingSelection: false)
+
+        #expect(model.selection == ["Second.swift"])
+        #expect(model.focusedID == "Second.swift")
+        #expect(selections == [["Second.swift"]])
+        #expect(focuses == ["Second.swift"])
+        _ = selectionSubscription
+        _ = focusSubscription
     }
 
     private func findOutlineView(in view: NSView) -> NSOutlineView? {

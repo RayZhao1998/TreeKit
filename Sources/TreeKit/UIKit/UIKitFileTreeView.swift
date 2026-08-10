@@ -314,6 +314,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         }
 
         if request.focus {
+            collectionView.layoutIfNeeded()
             collectionView.becomeFirstResponder()
             setNeedsFocusUpdate()
             updateFocusIfNeeded()

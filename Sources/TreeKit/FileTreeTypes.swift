@@ -58,7 +58,8 @@ public enum FileTreeSearchMode: CaseIterable, Equatable, Hashable, Sendable {
     case hideNonMatches
 }
 
-/// The final alignment used by ``FileTreeModel/reveal(_:select:position:focus:)``.
+/// The final alignment used by ``FileTreeModel/reveal(_:select:position:focus:)`` and
+/// ``FileTreeModel/scrollTo(_:position:focus:)``.
 public enum FileTreeScrollPosition: Sendable {
     case nearest
     case center
