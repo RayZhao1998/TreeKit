@@ -114,6 +114,7 @@ public final class FileTreeView<Node: Identifiable>: NSView {
         outlineView.doubleAction = #selector(Coordinator.didDoubleClick(_:))
         outlineView.registerForDraggedTypes([Coordinator.pathPasteboardType])
         outlineView.setDraggingSourceOperationMask(.move, forLocal: true)
+        outlineView.setDraggingSourceOperationMask([], forLocal: false)
         outlineView.setAccessibilityRole(.outline)
         outlineView.setAccessibilityLabel("File tree")
 
