@@ -65,6 +65,11 @@ Its bundled fixture contains all 2,188 changed files from
 [`oven-sh/bun` PR #30412](https://diffshub.com/oven-sh/bun/pull/30412), including added,
 modified, deleted, and renamed paths.
 
+<p align="center">
+  <img src="Screenshots/demo-tree-light.png" alt="TreeKit Demo file tree in Light Mode" width="49%">
+  <img src="Screenshots/demo-tree-dark.png" alt="TreeKit Demo file tree in Dark Mode" width="49%">
+</p>
+
 Build, stage, and launch it as a foreground app bundle from the repository root:
 
 ```sh
