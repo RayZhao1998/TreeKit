@@ -148,8 +148,9 @@ public extension FileTreeModel where Node == FileTreePath {
             try failRename(.policyRejected(path: source.path))
         }
 
-        let component = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !component.isEmpty else { try failRename(.emptyName) }
+        let trimmedComponent = proposedName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedComponent.isEmpty else { try failRename(.emptyName) }
+        let component = proposedName
         let invalidScalars = component.unicodeScalars.contains {
             CharacterSet.controlCharacters.contains($0)
         }

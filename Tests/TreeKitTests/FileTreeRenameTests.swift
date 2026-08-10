@@ -107,7 +107,9 @@ struct FileTreeRenameTests {
         #expect(errors == [.policyRejected(path: "Protected.swift")])
     }
 
-    @Test(arguments: ["", "   ", ".", "..", "Nested/Name", "Nested\\Name", "bad\nname"])
+    @Test(arguments: [
+        "", "   ", ".", "..", "Nested/Name", "Nested\\Name", "bad\nname", "Name.swift\n"
+    ])
     func invalidComponentsKeepTheRenameSessionActive(_ proposedName: String) throws {
         let model = try FileTreeModel<FileTreePath>(paths: ["Original.swift"])
         try model.startRenaming("Original.swift")
@@ -117,6 +119,18 @@ struct FileTreeRenameTests {
         }
         #expect(model.renamingID == "Original.swift")
         #expect(model.preparedTree.contains("Original.swift"))
+    }
+
+    @Test
+    func preservesValidLeadingAndTrailingWhitespaceInAComponent() throws {
+        let path = "  Spaced.swift  "
+        let model = try FileTreeModel<FileTreePath>(paths: [path])
+
+        try model.startRenaming(path)
+        try model.commitRenaming(path)
+
+        #expect(model.renamingID == nil)
+        #expect(model.preparedTree.preorderIDs == [path])
     }
 
     @Test

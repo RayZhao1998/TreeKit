@@ -461,13 +461,17 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         didEndDisplaying cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard let renamingID = model.activeRenamingID else { return }
-        guard let index = visibleIndexByID[renamingID] else {
+        guard let renamingID = model.activeRenamingID,
+              let treeCell = cell as? UIKitFileTreeCell,
+              treeCell.activeRenameID == AnyHashable(renamingID)
+        else { return }
+        guard let currentIndex = visibleIndexByID[renamingID] else {
             model.cancelActiveRename()
             return
         }
-        guard index == indexPath.item else { return }
-        guard collectionView.cellForItem(at: IndexPath(item: index, section: 0)) == nil else {
+        guard collectionView.cellForItem(
+            at: IndexPath(item: currentIndex, section: indexPath.section)
+        ) == nil else {
             return
         }
         model.cancelActiveRename()
