@@ -477,10 +477,14 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         else { return }
 
         var newlyExpandedAncestors: [Node.ID] = []
-        for ancestorID in preparedTree.ancestorIDs(of: id) where preparedTree.isExpandable(ancestorID) {
-            if !expandedIDs.contains(ancestorID) {
-                newlyExpandedAncestors.append(ancestorID)
-            }
+        var resolvedAncestorIDs: Set<Node.ID> = []
+        for canonicalAncestorID in preparedTree.ancestorIDs(of: id) {
+            let ancestorID = interactionID(for: canonicalAncestorID)
+            guard preparedTree.isExpandable(ancestorID),
+                  resolvedAncestorIDs.insert(ancestorID).inserted,
+                  !expandedIDs.contains(ancestorID)
+            else { continue }
+            newlyExpandedAncestors.append(ancestorID)
         }
         if let firstNewlyExpandedAncestor = newlyExpandedAncestors.first {
             expandedIDs.formUnion(newlyExpandedAncestors)

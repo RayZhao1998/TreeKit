@@ -254,6 +254,28 @@ struct FileTreePathModelTests {
     }
 
     @Test
+    func revealRecordsOnlyRenderedFlattenedExpansionIdentities() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Branch/Chain/Leaf/File.swift",
+                "Root/Sibling.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+
+        model.reveal("Root/Branch/Chain/Leaf/File.swift")
+
+        #expect(model.expandedIDs == ["Root/", "Root/Branch/Chain/Leaf/"])
+        model.collapse("Root/Branch/Chain/Leaf/")
+        model.setFlattenEmptyDirectories(false)
+
+        #expect(model.expandedIDs == ["Root/"])
+        #expect(model.visibleRows.map(\.id) == [
+            "Root/", "Root/Branch/", "Root/Sibling.swift"
+        ])
+    }
+
+    @Test
     func flattenedSearchFocusAndNavigationUseUniqueTerminalRows() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: [
