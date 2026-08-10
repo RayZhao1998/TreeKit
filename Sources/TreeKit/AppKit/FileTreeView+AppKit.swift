@@ -66,6 +66,13 @@ public final class FileTreeView<Node: Identifiable>: NSView {
         bindToModel()
     }
 
+    deinit {
+        let model = model
+        Task { @MainActor in
+            model.cancelActiveRename()
+        }
+    }
+
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("Use init(model:configuration:rowProvider:)")
@@ -84,6 +91,13 @@ public final class FileTreeView<Node: Identifiable>: NSView {
     @discardableResult
     public func focusTree() -> Bool {
         window?.makeFirstResponder(outlineView) ?? false
+    }
+
+    public override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil {
+            model.cancelActiveRename()
+        }
     }
 
     public override func layout() {
