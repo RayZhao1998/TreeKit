@@ -453,7 +453,11 @@ struct FileTreeModelTests {
         #expect(model.focusParentItem() == "root")
         #expect(model.focusPreviousItem() == "root")
         #expect(model.focusLastItem() == "tail")
+        let boundaryRevealSequence = try #require(model.revealRequest?.sequence)
         #expect(model.focusNextItem() == "tail")
+        #expect(model.revealRequest?.sequence == boundaryRevealSequence + 1)
+        #expect(model.revealRequest?.id == "tail")
+        #expect(model.revealRequest?.focus == true)
 
         model.expand("folder")
         model.focus("folder")

@@ -648,8 +648,6 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     private func focusVisibleItem(at index: Int) -> Node.ID? {
         guard visibleRows.indices.contains(index) else { return focusedID }
         let id = visibleRows[index].id
-        guard focusedID != id else { return id }
-
         focusedID = id
         lastFocusedVisibleIndex = index
         revealSequence &+= 1
