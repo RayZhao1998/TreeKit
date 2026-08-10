@@ -110,7 +110,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         rebuildVisibleIndex()
         if pathFlattenEmptyDirectories {
             self.selection = Set(selection.map { interactionID(for: $0) })
-            self.expandedIDs = Set(expandedIDs.map { interactionID(for: $0) }).filtering {
+            self.expandedIDs = Set(expandedIDs.map { canonicalInteractionID(for: $0) }).filtering {
                 preparedTree.isExpandable($0)
             }
             self.focusedID = focusedID.map { interactionID(for: $0) }
@@ -173,7 +173,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         rebuildVisibleRows()
         selection = Set(selection.map { interactionID(for: $0) })
         focusedID = focusedID.map { interactionID(for: $0) }
-        let projectedExpansion = Set(expandedIDs.map { interactionID(for: $0) }).filtering {
+        let projectedExpansion = Set(expandedIDs.map { canonicalInteractionID(for: $0) }).filtering {
             nextPreparedTree.isExpandable($0)
         }
         if projectedExpansion != expandedIDs {
@@ -759,10 +759,17 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         if let visibleID = visibleRow(for: id)?.id {
             return visibleID
         }
+        return canonicalInteractionID(for: id, visibleIDSet: searchVisibleIDSet)
+    }
+
+    private func canonicalInteractionID(
+        for id: Node.ID,
+        visibleIDSet: Set<Node.ID>? = nil
+    ) -> Node.ID {
         return Self.flattenedDirectoryChain(
             startingAt: id,
             in: preparedTree,
-            visibleIDSet: searchVisibleIDSet,
+            visibleIDSet: visibleIDSet,
             enabled: pathFlattenEmptyDirectories
         ).last ?? id
     }
@@ -776,7 +783,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         rebuildVisibleRows()
 
         selection = Set(selection.map { interactionID(for: $0) })
-        expandedIDs = Set(expandedIDs.map { interactionID(for: $0) }).filtering {
+        expandedIDs = Set(expandedIDs.map { canonicalInteractionID(for: $0) }).filtering {
             preparedTree.isExpandable($0)
         }
         focusedID = focusedID.map { interactionID(for: $0) }

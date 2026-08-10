@@ -276,6 +276,32 @@ struct FileTreePathModelTests {
     }
 
     @Test
+    func enablingFlatteningDuringSearchPreservesCanonicalExpansion() throws {
+        let prepared = try prepareFileTree(
+            paths: [
+                "Root/Branch/Leaf/File.swift",
+                "Root/Sibling.swift"
+            ],
+            options: .init(sort: .inputOrder)
+        )
+        let model = FileTreeModel(
+            prepared,
+            initialExpansion: .identifiers(["Root/"]),
+            searchText: \.name
+        )
+
+        model.openSearch(initialQuery: "branch")
+        model.setFlattenEmptyDirectories(true)
+
+        #expect(model.expandedIDs == ["Root/"])
+        model.closeSearch()
+        #expect(model.expandedIDs == ["Root/"])
+        #expect(model.visibleRows.map(\.id) == [
+            "Root/", "Root/Branch/Leaf/", "Root/Sibling.swift"
+        ])
+    }
+
+    @Test
     func flattenedSearchFocusAndNavigationUseUniqueTerminalRows() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: [
