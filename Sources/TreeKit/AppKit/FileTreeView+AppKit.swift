@@ -367,13 +367,22 @@ private extension FileTreeView {
         }
 
         func reloadMountedRows() {
-            guard let outlineView = owner?.outlineView else { return }
+            guard let owner else { return }
+            let outlineView = owner.outlineView
             let visibleRows = outlineView.rows(in: outlineView.visibleRect)
             guard visibleRows.location != NSNotFound, visibleRows.length > 0 else { return }
+            var rowIndexes = IndexSet(
+                integersIn: visibleRows.location..<(visibleRows.location + visibleRows.length)
+            )
+            if let activeID = owner.model.activeRenamingID,
+               hasMountedRenameEditor(for: activeID, in: outlineView),
+               let box = boxesByID[activeID] {
+                let activeRow = outlineView.row(forItem: box)
+                if activeRow >= 0 { rowIndexes.remove(activeRow) }
+            }
+            guard !rowIndexes.isEmpty else { return }
             outlineView.reloadData(
-                forRowIndexes: IndexSet(
-                    integersIn: visibleRows.location..<(visibleRows.location + visibleRows.length)
-                ),
+                forRowIndexes: rowIndexes,
                 columnIndexes: IndexSet(integer: 0)
             )
         }
@@ -383,6 +392,10 @@ private extension FileTreeView {
             let outlineView = owner.outlineView
             let indexes = Set(identifiers.compactMap { id -> Int? in
                 let renderedID = owner.model.visibleRow(for: id)?.id ?? id
+                if renderedID == owner.model.activeRenamingID,
+                   hasMountedRenameEditor(for: renderedID, in: outlineView) {
+                    return nil
+                }
                 guard let box = boxesByID[renderedID] else { return nil }
                 let row = outlineView.row(forItem: box)
                 return row >= 0 ? row : nil
@@ -392,6 +405,19 @@ private extension FileTreeView {
                 forRowIndexes: IndexSet(indexes),
                 columnIndexes: IndexSet(integer: 0)
             )
+        }
+
+        private func hasMountedRenameEditor(
+            for id: Node.ID,
+            in outlineView: NSOutlineView
+        ) -> Bool {
+            guard let box = boxesByID[id] else { return false }
+            let row = outlineView.row(forItem: box)
+            guard row >= 0,
+                  let cell = outlineView.view(atColumn: 0, row: row, makeIfNecessary: false)
+                    as? AppKitTreeRowHostCell
+            else { return false }
+            return cell.activeRenameID?.base as? Node.ID == id
         }
 
         func cancelRenameIfOffscreen() {
@@ -769,7 +795,8 @@ private final class AppKitTreeRowHostCell: NSTableCellView {
         }
 
         let nextID = AnyHashable(id)
-        if activeRenameID != nextID {
+        let isStarting = activeRenameID != nextID
+        if isStarting {
             renameField.stringValue = value
             activeRenameID = nextID
         }
@@ -777,10 +804,12 @@ private final class AppKitTreeRowHostCell: NSTableCellView {
         renameField.onCommit = onCommit
         renameField.onCancel = onCancel
         renameField.isHidden = false
-        renameField.selectText(nil)
-        Task { @MainActor [weak self] in
-            guard let self, !self.renameField.isHidden else { return }
-            _ = self.window?.makeFirstResponder(self.renameField)
+        if isStarting {
+            renameField.selectText(nil)
+            Task { @MainActor [weak self] in
+                guard let self, !self.renameField.isHidden else { return }
+                _ = self.window?.makeFirstResponder(self.renameField)
+            }
         }
     }
 

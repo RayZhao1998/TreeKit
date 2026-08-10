@@ -160,6 +160,35 @@ struct FileTreeRenameTests {
     }
 
     @Test
+    func appKitRowReloadPreservesTheActiveRenameDraftAndSelection() throws {
+        let model = try FileTreeModel<FileTreePath>(paths: ["First.swift", "Second.swift"])
+        let view = FileTreeView(model: model)
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 180),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = view
+        view.layoutSubtreeIfNeeded()
+
+        try model.startRenaming("First.swift")
+        view.layoutSubtreeIfNeeded()
+        let field = try #require(findEditableTextField(in: view))
+        field.stringValue = "Draft.swift"
+        _ = window.makeFirstResponder(field)
+        let editor = try #require(field.currentEditor() as? NSTextView)
+        editor.setSelectedRange(NSRange(location: 5, length: 0))
+
+        view.reloadRows(withIDs: ["First.swift"])
+
+        let reloadedField = try #require(findEditableTextField(in: view))
+        #expect(reloadedField.stringValue == "Draft.swift")
+        #expect(reloadedField.currentEditor()?.selectedRange == NSRange(location: 5, length: 0))
+        _ = window
+    }
+
+    @Test
     func appKitCancelsRenameWhenTheEditedRowLeavesTheViewport() async throws {
         let paths = (0..<80).map { String(format: "File-%03d.swift", $0) }
         let model = try FileTreeModel<FileTreePath>(paths: paths, options: .init(sort: .inputOrder))

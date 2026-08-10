@@ -460,17 +460,16 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         didEndDisplaying cell: UICollectionViewCell,
         forItemAt indexPath: IndexPath
     ) {
-        guard
-            let renamingID = model.activeRenamingID,
-            visibleIndexByID[renamingID] == indexPath.item
-        else { return }
-        guard
-            let index = visibleIndexByID[renamingID],
-            collectionView.cellForItem(at: IndexPath(item: index, section: 0)) != nil
-        else {
+        guard let renamingID = model.activeRenamingID else { return }
+        guard let index = visibleIndexByID[renamingID] else {
             model.cancelActiveRename()
             return
         }
+        guard index == indexPath.item else { return }
+        guard collectionView.cellForItem(at: IndexPath(item: index, section: 0)) == nil else {
+            return
+        }
+        model.cancelActiveRename()
     }
 
     // MARK: - UICollectionViewDelegate
@@ -796,7 +795,8 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
         }
 
         let nextID = AnyHashable(id)
-        if activeRenameID != nextID {
+        let isStarting = activeRenameID != nextID
+        if isStarting {
             renameField.text = value
             activeRenameID = nextID
         }
@@ -805,10 +805,12 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
         renameField.isHidden = false
         contentView.bringSubviewToFront(renameField)
         setNeedsLayout()
-        Task { @MainActor [weak self] in
-            guard let self, !self.renameField.isHidden else { return }
-            self.renameField.becomeFirstResponder()
-            self.renameField.selectAll(nil)
+        if isStarting {
+            Task { @MainActor [weak self] in
+                guard let self, !self.renameField.isHidden else { return }
+                self.renameField.becomeFirstResponder()
+                self.renameField.selectAll(nil)
+            }
         }
     }
 
