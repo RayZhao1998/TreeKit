@@ -539,7 +539,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         var newlyExpandedAncestors: [Node.ID] = []
         var resolvedAncestorIDs: Set<Node.ID> = []
         for canonicalAncestorID in preparedTree.ancestorIDs(of: id) {
-            let ancestorID = interactionID(for: canonicalAncestorID)
+            // Expansion is durable model state, so resolve it through the canonical flattened
+            // topology rather than a search-time projection whose terminal row may be temporary.
+            let ancestorID = canonicalInteractionID(for: canonicalAncestorID)
             guard preparedTree.isExpandable(ancestorID),
                   resolvedAncestorIDs.insert(ancestorID).inserted,
                   !expandedIDs.contains(ancestorID)
@@ -916,11 +918,14 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         let normalizedQuery = isOpen ? Self.normalizeSearchQuery(query) : ""
         guard self.isSearchOpen != isOpen || searchQuery != normalizedQuery else { return }
 
+        let previouslyVisibleSelection = Set(selection.filter { visibleRow(for: $0) != nil })
         self.isSearchOpen = isOpen
         searchQuery = normalizedQuery
         refreshSearchMatches(selectingFallbackFocus: true)
         rebuildVisibleRows()
-        normalizeSearchInteractionIfNeeded()
+        normalizeSearchInteractionIfNeeded(
+            remappingPreviouslyVisibleSelection: previouslyVisibleSelection
+        )
         expansionRevision &+= 1
         searchRevision &+= 1
         publishChange()
