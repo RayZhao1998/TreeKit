@@ -312,7 +312,8 @@ requires a directory, while `inside` with a `nil` target means the forest root. 
 drags exclude redundant descendants of selected directories. Successful drops validate all
 destinations first, then install one path-mutation transaction and emit typed completion events;
 failed requests emit typed failure events without changing the tree. Exact sibling reordering uses
-`.inputOrder`; sorted models reapply their chosen sort policy.
+`.inputOrder`; sorted models reapply their chosen sort policy. Native sessions are scoped to their
+originating model so two mounted trees cannot mutate one another accidentally.
 
 TreeKit owns only in-memory intent. Callers still own filesystem moves, authorization, persistence,
 rollback, external drag formats, and error presentation.

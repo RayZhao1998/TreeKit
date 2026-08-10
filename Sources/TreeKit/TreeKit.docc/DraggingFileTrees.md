@@ -17,7 +17,8 @@ model.configureDragAndDrop(.init(
 Native renderers provide platform drag previews, drop indicators, autoscroll, and delayed folder
 expansion. SwiftUI uses the same native host. Starting a selected row captures the current
 multi-selection, removes descendants whose selected ancestor already represents them, and keeps
-sources in prepared preorder.
+sources in prepared preorder. Native sessions retain their originating model identity and are
+rejected by other mounted trees.
 
 ## Resolve a target
 

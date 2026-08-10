@@ -483,7 +483,10 @@ private extension FileTreeView {
 
             let pasteboardItem = NSPasteboardItem()
             pasteboardItem.setPropertyList(
-                session.sourcePaths.map(\.path),
+                [
+                    "paths": session.sourcePaths.map(\.path),
+                    "origin": session.originID?.uuidString ?? ""
+                ],
                 forType: Self.pathPasteboardType
             )
             return pasteboardItem
@@ -676,11 +679,14 @@ private extension FileTreeView {
         private func dragSession(from pasteboard: NSPasteboard) -> FileTreeDragSession? {
             guard
                 let propertyList = pasteboard.propertyList(forType: Self.pathPasteboardType)
-                    as? [String]
+                    as? [String: Any],
+                let pathStrings = propertyList["paths"] as? [String],
+                let originString = propertyList["origin"] as? String,
+                let originID = UUID(uuidString: originString)
             else { return nil }
-            let paths = propertyList.compactMap { try? FileTreePath(path: $0) }
+            let paths = pathStrings.compactMap { try? FileTreePath(path: $0) }
             guard !paths.isEmpty else { return nil }
-            return FileTreeDragSession(sourcePaths: paths)
+            return FileTreeDragSession(sourcePaths: paths, originID: originID)
         }
 
         private func dropTarget(

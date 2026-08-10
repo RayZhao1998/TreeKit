@@ -518,8 +518,12 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         _ collectionView: UICollectionView,
         canHandle session: any UIDropSession
     ) -> Bool {
-        session.localDragSession != nil
-            && session.items.contains { $0.localObject is FileTreeDragSession }
+        guard let pathModel = model as? FileTreeModel<FileTreePath> else { return false }
+        return session.localDragSession != nil
+            && session.items.contains {
+                ($0.localObject as? FileTreeDragSession)?.originID
+                    == pathModel.fileTreeDragDropOriginID
+            }
     }
 
     public func collectionView(
@@ -569,11 +573,26 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         else { return }
 
         do {
-            try pathModel.performDrop(dragSession, target: target)
-            if let destination = coordinator.destinationIndexPath {
-                for item in coordinator.items {
-                    coordinator.drop(item.dragItem, toItemAt: destination)
-                }
+            let event = try pathModel.performDrop(dragSession, target: target)
+            let fallbackRenderedID = target.path.flatMap {
+                pathModel.visibleRow(for: $0.id)?.id
+            }
+            for (offset, item) in coordinator.items.enumerated() {
+                let destinationID = event.moves.indices.contains(offset)
+                    ? event.moves[offset].destinationPath.id
+                    : nil
+                let renderedID = destinationID.flatMap {
+                    pathModel.visibleRow(for: $0)?.id
+                } ?? fallbackRenderedID
+                guard let renderedID,
+                      let finalIndex = pathModel.visibleRows.firstIndex(where: {
+                          $0.id == renderedID
+                      })
+                else { continue }
+                coordinator.drop(
+                    item.dragItem,
+                    toItemAt: IndexPath(item: finalIndex, section: 0)
+                )
             }
         } catch {
             return

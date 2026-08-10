@@ -97,6 +97,29 @@ struct FileTreeDragDropTests {
     }
 
     @Test
+    func rejectsANativeSessionFromAnotherModel() throws {
+        let sourceModel = try FileTreeModel<FileTreePath>(
+            paths: ["Source.swift", "Target/"]
+        )
+        let destinationModel = try FileTreeModel<FileTreePath>(
+            paths: ["Source.swift", "Target/"]
+        )
+        let session = try sourceModel.makeDragSession(startingAt: "Source.swift")
+        let target = FileTreeDropTarget(
+            path: try FileTreePath(path: "Target/", kind: .directory),
+            position: .inside
+        )
+
+        #expect(!destinationModel.canDrop(session, target: target))
+        #expect(throws: FileTreeDragDropError.foreignSession) {
+            try destinationModel.performDrop(session, target: target)
+        }
+        #expect(sourceModel.preparedTree.contains("Source.swift"))
+        #expect(destinationModel.preparedTree.contains("Source.swift"))
+        #expect(!destinationModel.preparedTree.contains("Target/Source.swift"))
+    }
+
+    @Test
     func rejectsSelfCyclesDescendantsAndDuplicateDestinations() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: [

@@ -38,9 +38,16 @@ public struct FileTreeDropTarget: Equatable, Sendable {
 /// Canonical sources captured when a native drag begins.
 public struct FileTreeDragSession: Equatable, Sendable {
     public let sourcePaths: [FileTreePath]
+    internal let originID: UUID?
 
     public init(sourcePaths: [FileTreePath]) {
         self.sourcePaths = sourcePaths
+        self.originID = nil
+    }
+
+    internal init(sourcePaths: [FileTreePath], originID: UUID) {
+        self.sourcePaths = sourcePaths
+        self.originID = originID
     }
 }
 
@@ -109,6 +116,7 @@ public enum FileTreeDragDropEvent: Equatable, Sendable {
 /// Validation failures for path-first drag and drop.
 public enum FileTreeDragDropError: Error, Equatable, Sendable {
     case noSources
+    case foreignSession
     case sourceNotFound(path: String)
     case dragRejected(paths: [String])
     case invalidTarget
@@ -124,6 +132,8 @@ extension FileTreeDragDropError: LocalizedError {
         switch self {
         case .noSources:
             "A drag requires at least one source path."
+        case .foreignSession:
+            "The native drag originated from a different file tree model."
         case .sourceNotFound(let path):
             "No file tree item exists at '\(path)'."
         case .dragRejected(let paths):
@@ -208,7 +218,10 @@ public extension FileTreeModel where Node == FileTreePath {
         guard configuration.canDrag(normalized) else {
             throw FileTreeDragDropError.dragRejected(paths: normalized.map(\.path))
         }
-        return FileTreeDragSession(sourcePaths: normalized)
+        return FileTreeDragSession(
+            sourcePaths: normalized,
+            originID: fileTreeDragDropOriginID
+        )
     }
 
     /// Returns a fully resolved proposal without publishing a failure event.
@@ -295,6 +308,9 @@ public extension FileTreeModel where Node == FileTreePath {
         enforcingPolicy: Bool
     ) throws -> FileTreeDropProposal {
         guard !session.sourcePaths.isEmpty else { throw FileTreeDragDropError.noSources }
+        if let originID = session.originID, originID != fileTreeDragDropOriginID {
+            throw FileTreeDragDropError.foreignSession
+        }
         let canonicalSources = try session.sourcePaths.map { source -> FileTreePath in
             guard let current = preparedTree.node(for: source.id) else {
                 throw FileTreeDragDropError.sourceNotFound(path: source.path)
