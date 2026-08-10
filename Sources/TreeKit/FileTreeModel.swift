@@ -84,6 +84,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     >? = nil
     internal var fileTreeRenameConfiguration: FileTreeRenameConfiguration? = nil
     internal var fileTreeRenameSubject: PassthroughSubject<FileTreeRenameEvent, Never>? = nil
+    internal var fileTreeDragDropConfiguration: FileTreeDragDropConfiguration? = nil
+    internal var fileTreeDragDropSubject: PassthroughSubject<FileTreeDragDropEvent, Never>? = nil
+    internal let fileTreeDragDropOriginID = UUID()
     private var activeRenameCommit: ((String) -> Result<Void, FileTreeRenameError>)?
     private var activeRenameCancel: (() -> Void)?
 

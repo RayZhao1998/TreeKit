@@ -128,6 +128,9 @@ public final class FileTreeView<Node: Identifiable>: NSView {
         outlineView.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
         outlineView.target = coordinator
         outlineView.doubleAction = #selector(Coordinator.didDoubleClick(_:))
+        outlineView.registerForDraggedTypes([Coordinator.pathPasteboardType])
+        outlineView.setDraggingSourceOperationMask(.move, forLocal: true)
+        outlineView.setDraggingSourceOperationMask([], forLocal: false)
         outlineView.setAccessibilityRole(.outline)
         outlineView.setAccessibilityLabel("File tree")
 
@@ -264,6 +267,10 @@ private extension FileTreeView {
             NSUserInterfaceItemIdentifier("TreeKit.FileTree.Column")
         }
 
+        static var pathPasteboardType: NSPasteboard.PasteboardType {
+            NSPasteboard.PasteboardType("software.trees.TreeKit.paths")
+        }
+
         private static var cellIdentifier: NSUserInterfaceItemIdentifier {
             NSUserInterfaceItemIdentifier("TreeKit.FileTree.Row")
         }
@@ -274,6 +281,8 @@ private extension FileTreeView {
         private var appliedDataRevision: UInt64?
         private var appliedExpansionRevision: UInt64?
         private var appliedSearchRevision: UInt64?
+        private var pendingDragSession: FileTreeDragSession?
+        private var pendingDragRevision: UInt64?
         private var appliedRenameRevision: UInt64?
         private var requestedExpandedIDs: Set<Node.ID> = []
         private var appliedExpandedIDs: Set<Node.ID> = []
@@ -284,6 +293,8 @@ private extension FileTreeView {
         private var appliedRenamingID: Node.ID?
         private var appliedRevealSequence: UInt64 = 0
         private var isApplyingModelState = false
+        private var hoveredDropPath: String?
+        private var hoverExpansionTask: Task<Void, Never>?
 
         init(owner: FileTreeView) {
             self.owner = owner
@@ -303,6 +314,9 @@ private extension FileTreeView {
             appliedFocusedID = nil
             appliedRenamingID = nil
             appliedRevealSequence = 0
+            hoveredDropPath = nil
+            hoverExpansionTask?.cancel()
+            hoverExpansionTask = nil
         }
 
         func synchronize(forceRowReload: Bool = false) {
@@ -485,6 +499,85 @@ private extension FileTreeView {
 
         func outlineView(
             _ outlineView: NSOutlineView,
+            pasteboardWriterForItem item: Any
+        ) -> (any NSPasteboardWriting)? {
+            guard
+                let owner,
+                let pathModel = owner.model as? FileTreeModel<FileTreePath>,
+                let box = item as? ItemBox,
+                let id = box.id as? String,
+                let sourcePath = pathModel.renderedDragSourcePath(for: id),
+                let session = dragSessionForWriting(startingAt: id, model: pathModel),
+                session.sourcePaths.contains(where: { $0.id == sourcePath.id })
+            else { return nil }
+
+            let pasteboardItem = NSPasteboardItem()
+            pasteboardItem.setPropertyList(
+                [
+                    "path": sourcePath.path,
+                    "origin": session.originID?.uuidString ?? ""
+                ],
+                forType: Self.pathPasteboardType
+            )
+            return pasteboardItem
+        }
+
+        func outlineView(
+            _ outlineView: NSOutlineView,
+            validateDrop info: any NSDraggingInfo,
+            proposedItem item: Any?,
+            proposedChildIndex index: Int
+        ) -> NSDragOperation {
+            guard
+                let owner,
+                let pathModel = owner.model as? FileTreeModel<FileTreePath>,
+                let session = dragSession(from: info.draggingPasteboard),
+                let target = dropTarget(item: item, childIndex: index, model: pathModel),
+                pathModel.canDrop(session, target: target)
+            else {
+                cancelHoverExpansion()
+                return []
+            }
+
+            scheduleHoverExpansion(for: target, model: pathModel)
+            outlineView.setDropItem(item, dropChildIndex: index)
+            return .move
+        }
+
+        func outlineView(
+            _ outlineView: NSOutlineView,
+            acceptDrop info: any NSDraggingInfo,
+            item: Any?,
+            childIndex index: Int
+        ) -> Bool {
+            defer { cancelHoverExpansion() }
+            guard
+                let owner,
+                let pathModel = owner.model as? FileTreeModel<FileTreePath>,
+                let session = dragSession(from: info.draggingPasteboard),
+                let target = dropTarget(item: item, childIndex: index, model: pathModel)
+            else { return false }
+            do {
+                try pathModel.performDrop(session, target: target)
+                return true
+            } catch {
+                return false
+            }
+        }
+
+        func outlineView(
+            _ outlineView: NSOutlineView,
+            draggingSession session: NSDraggingSession,
+            endedAt screenPoint: NSPoint,
+            operation: NSDragOperation
+        ) {
+            cancelHoverExpansion()
+            pendingDragSession = nil
+            pendingDragRevision = nil
+        }
+
+        func outlineView(
+            _ outlineView: NSOutlineView,
             viewFor tableColumn: NSTableColumn?,
             item: Any
         ) -> NSView? {
@@ -613,6 +706,108 @@ private extension FileTreeView {
                 return owner.model.renderedChildIDs(of: box.id)
             }
             return owner.model.renderedRootIDs
+        }
+
+        private func dragSession(from pasteboard: NSPasteboard) -> FileTreeDragSession? {
+            let payloads = (pasteboard.pasteboardItems ?? []).compactMap { item -> (String, String)? in
+                guard
+                    let propertyList = item.propertyList(forType: Self.pathPasteboardType)
+                        as? [String: Any],
+                    let path = propertyList["path"] as? String,
+                    let origin = propertyList["origin"] as? String
+                else { return nil }
+                return (path, origin)
+            }
+            guard
+                let originString = payloads.first?.1,
+                payloads.allSatisfy({ $0.1 == originString }),
+                let originID = UUID(uuidString: originString)
+            else { return nil }
+            let paths = payloads.compactMap { try? FileTreePath(path: $0.0) }
+            guard !paths.isEmpty else { return nil }
+            return FileTreeDragSession(sourcePaths: paths, originID: originID)
+        }
+
+        private func dragSessionForWriting(
+            startingAt id: String,
+            model: FileTreeModel<FileTreePath>
+        ) -> FileTreeDragSession? {
+            if pendingDragRevision == model.revision, let pendingDragSession {
+                return pendingDragSession
+            }
+            guard let session = try? model.makeDragSession(startingAt: id) else { return nil }
+            pendingDragSession = session
+            pendingDragRevision = model.revision
+            return session
+        }
+
+        private func dropTarget(
+            item: Any?,
+            childIndex index: Int,
+            model: FileTreeModel<FileTreePath>
+        ) -> FileTreeDropTarget? {
+            let parentPath = (item as? ItemBox)
+                .flatMap { $0.id as? String }
+                .flatMap { model.preparedTree.node(for: $0) }
+            if index == NSOutlineViewDropOnItemIndex {
+                guard let parentPath else { return .init(path: nil, position: .inside) }
+                return model.renderedDropTarget(for: parentPath.id, position: .inside)
+            }
+
+            let childIDs: [String]
+            if let parentPath {
+                childIDs = model.renderedChildIDs(of: parentPath.id)
+            } else {
+                childIDs = model.renderedRootIDs
+            }
+            if childIDs.indices.contains(index),
+               let child = model.preparedTree.node(for: childIDs[index]) {
+                return model.renderedDropTarget(for: child.id, position: .before)
+            }
+            if let lastID = childIDs.last,
+               let last = model.preparedTree.node(for: lastID) {
+                return model.renderedDropTarget(for: last.id, position: .after)
+            }
+            if let parentPath {
+                return model.renderedDropTarget(for: parentPath.id, position: .inside)
+            }
+            return .init(path: nil, position: .inside)
+        }
+
+        private func scheduleHoverExpansion(
+            for target: FileTreeDropTarget,
+            model: FileTreeModel<FileTreePath>
+        ) {
+            guard target.position == .inside,
+                  let path = target.path,
+                  path.kind == .directory,
+                  !model.isRenderedExpanded(path.id)
+            else {
+                cancelHoverExpansion()
+                return
+            }
+            guard hoveredDropPath != path.id else { return }
+            cancelHoverExpansion()
+            hoveredDropPath = path.id
+            let delay = model.dragDropOpenDelay
+            hoverExpansionTask = Task { @MainActor [weak self, weak model] in
+                if delay > 0 {
+                    do {
+                        try await Task.sleep(for: .seconds(delay))
+                    } catch {
+                        return
+                    }
+                }
+                guard !Task.isCancelled,
+                      let self, self.hoveredDropPath == path.id, let model else { return }
+                model.expand(path.id)
+            }
+        }
+
+        private func cancelHoverExpansion() {
+            hoveredDropPath = nil
+            hoverExpansionTask?.cancel()
+            hoverExpansionTask = nil
         }
 
         private func rowContext(

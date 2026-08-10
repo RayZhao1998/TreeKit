@@ -174,7 +174,18 @@ public extension FileTreeModel where Node == FileTreePath {
     /// remain private to validation; mounted renderers receive only the final projection.
     func batch(_ mutations: [FileTreePathMutation]) throws {
         guard !mutations.isEmpty else { return }
-        try applyMutations(mutations, asBatch: true)
+        try applyMutations(mutations, asBatch: true, reorderPlan: nil)
+    }
+
+    internal func applyDrop(
+        moves: [FileTreeDropMove],
+        reorderPlan: FileTreeDropReorderPlan
+    ) throws {
+        let mutations = moves.compactMap { move -> FileTreePathMutation? in
+            guard move.sourcePath.id != move.destinationPath.id else { return nil }
+            return .move(from: move.sourcePath.path, to: move.destinationPath.path)
+        }
+        try applyMutations(mutations, asBatch: true, reorderPlan: reorderPlan)
     }
 
     /// Replaces all caller-supplied paths and publishes one `.reset` transaction.
@@ -209,7 +220,8 @@ public extension FileTreeModel where Node == FileTreePath {
 
     private func applyMutations(
         _ mutations: [FileTreePathMutation],
-        asBatch: Bool
+        asBatch: Bool,
+        reorderPlan: FileTreeDropReorderPlan? = nil
     ) throws {
         var nextState = fileTreePathMutationState
             ?? FileTreePathMutationState(preparedTree: preparedTree)
@@ -255,6 +267,16 @@ public extension FileTreeModel where Node == FileTreePath {
             case .batch, .reset:
                 preconditionFailure("Batch application only produces leaf mutation events.")
             }
+        }
+
+        if let reorderPlan, nextState.options.sort == .inputOrder {
+            nextState = try Self.reordered(
+                state: nextState,
+                preparedTree: nextPreparedTree,
+                originalPreparedTree: preparedTree,
+                plan: reorderPlan
+            )
+            nextPreparedTree = try Self.prepare(state: nextState)
         }
 
         fileTreePathMutationState = nextState
@@ -363,6 +385,106 @@ public extension FileTreeModel where Node == FileTreePath {
             paths: state.explicitPaths,
             options: state.options
         )
+    }
+
+    private static func reordered(
+        state: FileTreePathMutationState,
+        preparedTree: PreparedTree<FileTreePath>,
+        originalPreparedTree: PreparedTree<FileTreePath>,
+        plan: FileTreeDropReorderPlan
+    ) throws -> FileTreePathMutationState {
+        let moveBySourceID = Dictionary(
+            uniqueKeysWithValues: plan.moves.map { ($0.sourcePath.id, $0) }
+        )
+        var mappedIDByOriginalID: [String: String] = [:]
+        mappedIDByOriginalID.reserveCapacity(originalPreparedTree.count)
+        var activeDirectoryMove: FileTreeDropMove?
+        for originalID in originalPreparedTree.preorderIDs {
+            if let activeDirectoryMove,
+               originalID.hasPrefix(activeDirectoryMove.sourcePath.path) {
+                mappedIDByOriginalID[originalID] = moving(
+                    originalID,
+                    from: activeDirectoryMove.sourcePath,
+                    to: activeDirectoryMove.destinationPath
+                )
+                continue
+            }
+            activeDirectoryMove = nil
+            guard let move = moveBySourceID[originalID] else {
+                mappedIDByOriginalID[originalID] = originalID
+                continue
+            }
+            mappedIDByOriginalID[originalID] = move.destinationPath.id
+            if move.sourcePath.kind == .directory {
+                activeDirectoryMove = move
+            }
+        }
+
+        func mappedID(_ id: String) -> String {
+            mappedIDByOriginalID[id] ?? id
+        }
+
+        var roots = originalPreparedTree.rootIDs.map(mappedID).filter {
+            preparedTree.contains($0) && preparedTree.parentByID[$0] == nil
+        }
+        var childrenByID: [String: [String]] = [:]
+        childrenByID.reserveCapacity(originalPreparedTree.childrenByID.count)
+        for originalParentID in originalPreparedTree.preorderIDs {
+            let parentID = mappedID(originalParentID)
+            guard preparedTree.contains(parentID) else { continue }
+            let children = (originalPreparedTree.childrenByID[originalParentID] ?? [])
+                .map(mappedID)
+                .filter {
+                    preparedTree.contains($0) && preparedTree.parentByID[$0] == parentID
+                }
+            childrenByID[parentID] = children
+        }
+
+        var siblings = plan.destinationParentID.flatMap { childrenByID[$0] } ?? roots
+        let movedSet = Set(plan.movedDestinationIDs)
+        let movedIDs = plan.movedDestinationIDs.filter(preparedTree.contains)
+        siblings.removeAll(where: movedSet.contains)
+
+        let insertionIndex: Int
+        switch plan.position {
+        case .inside:
+            insertionIndex = siblings.endIndex
+        case .before:
+            guard let referenceID = plan.referenceID,
+                  let index = siblings.firstIndex(of: referenceID)
+            else { throw FileTreePathMutationError.invalidDestination(path: plan.referenceID ?? "") }
+            insertionIndex = index
+        case .after:
+            guard let referenceID = plan.referenceID,
+                  let index = siblings.firstIndex(of: referenceID)
+            else { throw FileTreePathMutationError.invalidDestination(path: plan.referenceID ?? "") }
+            insertionIndex = siblings.index(after: index)
+        }
+        siblings.insert(contentsOf: movedIDs, at: insertionIndex)
+        if let destinationParentID = plan.destinationParentID {
+            childrenByID[destinationParentID] = siblings
+        } else {
+            roots = siblings
+        }
+
+        var preorder: [String] = []
+        preorder.reserveCapacity(preparedTree.count)
+        var stack = Array(roots.reversed())
+        while let id = stack.popLast() {
+            preorder.append(id)
+            let children = childrenByID[id] ?? (preparedTree.childrenByID[id] ?? [])
+            stack.append(contentsOf: children.reversed())
+        }
+        let rank = Dictionary(uniqueKeysWithValues: preorder.enumerated().map { ($1, $0) })
+
+        var nextState = state
+        nextState.explicitPaths = try state.explicitPaths.enumerated().sorted { left, right in
+            let leftPath = try FileTreePath(path: left.element)
+            let rightPath = try FileTreePath(path: right.element)
+            return (rank[leftPath.id] ?? Int.max, left.offset)
+                < (rank[rightPath.id] ?? Int.max, right.offset)
+        }.map(\.element)
+        return nextState
     }
 
     private static func parentDirectoryID(of path: FileTreePath) -> String? {
