@@ -97,6 +97,8 @@ struct FileTreeRenameTests {
             canRename: { $0.path != "Protected.swift" },
             onError: { errors.append($0) }
         ))
+        model.openSearch(initialQuery: "protected")
+        let searchRevision = model.searchRevision
 
         #expect(throws: FileTreeRenameError.policyRejected(path: "Protected.swift")) {
             try model.startRenaming("Protected.swift")
@@ -105,6 +107,9 @@ struct FileTreeRenameTests {
         #expect(model.preparedTree.preorderIDs == ["Editable.swift", "Protected.swift"])
         #expect(model.renameError == .policyRejected(path: "Protected.swift"))
         #expect(errors == [.policyRejected(path: "Protected.swift")])
+        #expect(model.isSearchOpen)
+        #expect(model.searchQuery == "protected")
+        #expect(model.searchRevision == searchRevision)
     }
 
     @Test(arguments: [

@@ -822,7 +822,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         return canonicalInteractionID(for: id, visibleIDSet: searchVisibleIDSet)
     }
 
-    private func canonicalInteractionID(
+    internal func canonicalInteractionID(
         for id: Node.ID,
         visibleIDSet: Set<Node.ID>? = nil
     ) -> Node.ID {
