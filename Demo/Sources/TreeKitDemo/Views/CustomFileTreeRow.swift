@@ -13,7 +13,7 @@ struct CustomFileTreeRow: View {
         .foregroundStyle(node.demoIconColor)
         .frame(width: 16)
 
-      Text(node.name)
+      Text(context.displayedPathSegments.joined(separator: " / "))
         .lineLimit(1)
         .truncationMode(.middle)
 

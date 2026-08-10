@@ -13,6 +13,7 @@ public struct PreparedTree<Node: Identifiable> {
     internal let depthByID: [Node.ID: Int]
     internal let siblingIndexByID: [Node.ID: Int]
     internal let preorderIDs: [Node.ID]
+    internal var fileTreePathOptions: FileTreePathOptions?
 
     /// Creates a prepared tree while preserving root and sibling order.
     ///
@@ -80,6 +81,7 @@ public struct PreparedTree<Node: Identifiable> {
         self.depthByID = depthByID
         self.siblingIndexByID = siblingIndexByID
         self.preorderIDs = preorderIDs
+        self.fileTreePathOptions = nil
     }
 
     /// Creates a prepared tree from a non-optional children key path.

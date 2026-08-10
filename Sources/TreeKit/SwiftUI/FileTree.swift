@@ -8,16 +8,28 @@ import SwiftUI
 /// Git decorations, badges, menus, or other custom content.
 public struct FileTreeDefaultRow: View {
     public let node: FileTreePath
+    public let segments: [FileTreeRowSegment<String>]
 
     public init(node: FileTreePath) {
         self.node = node
+        self.segments = [
+            FileTreeRowSegment(id: node.id, label: node.name, isTerminal: true)
+        ]
+    }
+
+    public init(
+        node: FileTreePath,
+        segments: [FileTreeRowSegment<String>]
+    ) {
+        self.node = node
+        self.segments = segments
     }
 
     public var body: some View {
         HStack(spacing: 6) {
             Image(systemName: node.kind == .directory ? "folder" : "doc")
                 .foregroundStyle(.secondary)
-            Text(node.name)
+            Text(segments.map(\.label).joined(separator: " / "))
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 0)
@@ -158,8 +170,8 @@ public extension FileTree where Node == FileTreePath, RowContent == FileTreeDefa
             model: model,
             configuration: configuration,
             onActivate: onActivate
-        ) { node, _ in
-            FileTreeDefaultRow(node: node)
+        ) { node, context in
+            FileTreeDefaultRow(node: node, segments: context.segments)
         }
     }
 }

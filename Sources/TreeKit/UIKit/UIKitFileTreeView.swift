@@ -139,7 +139,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             guard
                 let indexPath = collectionView.indexPath(for: cell),
                 let row = visibleRow(at: indexPath.item),
-                identifiers.contains(row.id)
+                !identifiers.isDisjoint(with: row.representedIDs)
             else { continue }
             configure(cell, at: indexPath)
         }
@@ -404,7 +404,8 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             isExpanded: model.isRenderedExpanded(row.id),
             isSelected: model.selection.contains(row.id),
             isFocused: model.focusedID == row.id,
-            isSearchMatch: model.isSearchMatch(row.id)
+            isSearchMatch: model.isSearchMatch(row.id),
+            segments: row.segments
         )
     }
 
@@ -547,10 +548,10 @@ public extension FileTreeView where Node == FileTreePath {
         model: FileTreeModel<FileTreePath>,
         configuration: FileTreeConfiguration = .init()
     ) {
-        self.init(model: model, configuration: configuration) { node, _, reusableView in
+        self.init(model: model, configuration: configuration) { node, context, reusableView in
             let row = (reusableView as? UIKitDefaultFileTreeRowView)
                 ?? UIKitDefaultFileTreeRowView()
-            row.update(with: node)
+            row.update(with: node, segments: context.segments)
             return row
         }
     }
@@ -785,10 +786,13 @@ private final class UIKitDefaultFileTreeRowView: UIView {
         fatalError("UIKitDefaultFileTreeRowView does not support initialization from a coder")
     }
 
-    func update(with node: FileTreePath) {
-        nameLabel.text = node.name
+    func update(
+        with node: FileTreePath,
+        segments: [FileTreeRowSegment<String>]
+    ) {
+        nameLabel.text = segments.map(\.label).joined(separator: " / ")
         iconView.image = UIImage(systemName: node.kind == .directory ? "folder" : "doc")
-        accessibilityLabel = node.name
+        accessibilityLabel = segments.map(\.label).joined(separator: " / ")
         accessibilityValue = node.kind == .directory ? "Folder" : "File"
     }
 }

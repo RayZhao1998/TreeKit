@@ -65,6 +65,15 @@ struct DemoControlPanel: View {
           .toggleStyle(.switch)
         }
 
+        Toggle(
+          "Flatten empty directory chains",
+          isOn: Binding(
+            get: { model.flattenEmptyDirectories },
+            set: { model.setFlattenEmptyDirectories($0) }
+          )
+        )
+        .toggleStyle(.switch)
+
         valueSlider(
           "Row height",
           value: configurationBinding(\.rowHeight),

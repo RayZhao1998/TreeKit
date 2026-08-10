@@ -70,6 +70,22 @@ default ordering is folders first, then lexicographic by component name.
 Call `prepareFileTree(paths:options:)` directly when preparation and model construction happen
 at different layers.
 
+Directory-only chains can be projected as one row without changing canonical paths:
+
+```swift
+let model = try FileTreeModel<FileTreePath>(
+    paths: paths,
+    options: .init(flattenEmptyDirectories: true)
+)
+
+model.setFlattenEmptyDirectories(false) // Toggle the projection at runtime.
+```
+
+The terminal directory owns selection, focus, disclosure, and activation for the combined row.
+Custom rows receive every represented component through `context.segments` and can render
+`context.displayedPathSegments.joined(separator: " / ")`. Search, reset, and incremental path
+mutations rebuild the flattened projection while preserving canonical identity state.
+
 ## SwiftUI: `FileTree`
 
 `FileTree` uses the built-in file/folder row when its model contains `FileTreePath` values:

@@ -100,6 +100,60 @@ struct RenderingAPITests {
     }
 
     @Test
+    func appKitRendersAndTogglesTheSharedFlattenedProjection() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: [
+                "Root/Branch/Leaf/First.swift",
+                "Root/Branch/Leaf/Second.swift"
+            ],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true),
+            initialExpansion: .identifiers(["Root/Branch/Leaf/"])
+        )
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+
+        #expect(outlineView.numberOfRows == 3)
+        #expect(model.visibleRows[0].representedIDs == [
+            "Root/", "Root/Branch/", "Root/Branch/Leaf/"
+        ])
+
+        model.setFlattenEmptyDirectories(false)
+        #expect(outlineView.numberOfRows == 1)
+
+        model.expand("Root/")
+        model.expand("Root/Branch/")
+        #expect(outlineView.numberOfRows == 5)
+    }
+
+    @Test
+    func appKitReloadsAFlattenedRowForAnyRepresentedIdentity() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["Root/Branch/Leaf/File.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+        var renderCount = 0
+        let view = FileTreeView(model: model) { _, _, reusableView in
+            renderCount += 1
+            return reusableView ?? NSView()
+        }
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 320, height: 180),
+            styleMask: [.titled],
+            backing: .buffered,
+            defer: false
+        )
+        window.contentView = view
+        view.layoutSubtreeIfNeeded()
+        _ = try #require(findOutlineView(in: view))
+        let initialRenderCount = renderCount
+
+        view.reloadRows(withIDs: ["Root/Branch/"])
+
+        #expect(renderCount == initialRenderCount + 1)
+        _ = window
+    }
+
+    @Test
     func appKitRestoresAForcedSearchExpansionAfterNativeCollapse() async throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Root/Folder/Target.swift"],
