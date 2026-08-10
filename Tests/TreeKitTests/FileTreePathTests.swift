@@ -733,6 +733,36 @@ struct FileTreePathModelTests {
     }
 
     @Test
+    func pathMutationsPreserveExpansionWhenTheySplitAFlattenedChain() throws {
+        func makeModel() throws -> FileTreeModel<FileTreePath> {
+            let model = try FileTreeModel<FileTreePath>(
+                paths: ["Root/Branch/Leaf/File.swift"],
+                options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+            )
+            model.expand("Root/")
+            #expect(model.expandedIDs == ["Root/Branch/Leaf/"])
+            return model
+        }
+
+        let addedModel = try makeModel()
+        try addedModel.add("Root/Sibling.swift")
+        #expect(addedModel.expandedIDs == ["Root/", "Root/Branch/Leaf/"])
+        #expect(addedModel.visibleRows.map(\.id) == [
+            "Root/", "Root/Branch/Leaf/", "Root/Branch/Leaf/File.swift", "Root/Sibling.swift"
+        ])
+
+        let batchedModel = try makeModel()
+        try batchedModel.batch([.add(path: "Root/Sibling.swift")])
+        #expect(batchedModel.expandedIDs == ["Root/", "Root/Branch/Leaf/"])
+
+        let resetModel = try makeModel()
+        try resetModel.resetPaths([
+            "Root/Branch/Leaf/File.swift", "Root/Sibling.swift"
+        ])
+        #expect(resetModel.expandedIDs == ["Root/", "Root/Branch/Leaf/"])
+    }
+
+    @Test
     func activeSearchRefreshesAfterMutations() throws {
         let model = try FileTreeModel<FileTreePath>(paths: ["Root/Existing.swift"])
         model.openSearch(initialQuery: "new")
