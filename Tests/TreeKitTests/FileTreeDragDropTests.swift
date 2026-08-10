@@ -170,6 +170,29 @@ struct FileTreeDragDropTests {
     }
 
     @Test
+    func rejectsOppositeKindDestinationCollisionsWithATypedFailure() throws {
+        let model = try FileTreeModel<FileTreePath>(
+            paths: ["Source/Foo", "Destination/Foo/"],
+            options: .init(sort: .inputOrder)
+        )
+        var failures: [FileTreeDropFailure] = []
+        model.configureDragAndDrop(.init(onDropError: { failures.append($0) }))
+        let session = try model.makeDragSession(startingAt: "Source/Foo")
+        let target = FileTreeDropTarget(
+            path: try FileTreePath(path: "Destination/", kind: .directory),
+            position: .inside
+        )
+
+        #expect(!model.canDrop(session, target: target))
+        #expect(throws: FileTreeDragDropError.duplicateDestination(path: "Destination/Foo")) {
+            try model.performDrop(session, target: target)
+        }
+        #expect(failures.last?.error == .duplicateDestination(path: "Destination/Foo"))
+        #expect(model.preparedTree.contains("Source/Foo"))
+        #expect(model.preparedTree.contains("Destination/Foo/"))
+    }
+
+    @Test
     func policyAndTypedCallbacksReportCompletedAndFailedDrops() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: ["Allowed.swift", "Protected.swift", "Target/"],

@@ -360,8 +360,14 @@ public extension FileTreeModel where Node == FileTreePath {
             )
         }
         var destinationIDs: Set<String> = []
+        var logicalDestinations: Set<String> = []
         for (source, destination) in zip(canonicalSources, destinations) {
-            guard destinationIDs.insert(destination.id).inserted else {
+            let logicalDestination = destination.kind == .directory
+                ? String(destination.path.dropLast())
+                : destination.path
+            guard destinationIDs.insert(destination.id).inserted,
+                  logicalDestinations.insert(logicalDestination).inserted
+            else {
                 throw FileTreeDragDropError.duplicateDestination(path: destination.path)
             }
             if destination.id == source.id {
@@ -371,6 +377,12 @@ public extension FileTreeModel where Node == FileTreePath {
                 continue
             }
             if preparedTree.contains(destination.id) {
+                throw FileTreeDragDropError.duplicateDestination(path: destination.path)
+            }
+            let oppositeKindID = destination.kind == .directory
+                ? logicalDestination
+                : destination.path + "/"
+            if preparedTree.contains(oppositeKindID) {
                 throw FileTreeDragDropError.duplicateDestination(path: destination.path)
             }
             if source.kind == .directory, destination.id.hasPrefix(source.path) {
