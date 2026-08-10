@@ -173,6 +173,20 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         focusedID nextFocus: Node.ID?
     ) {
         clearRenameSession(publishing: false)
+        let expansionSourceIDs: Set<Node.ID>
+        if pathFlattenEmptyDirectories {
+            expansionSourceIDs = nextExpansion.reduce(into: []) { result, expandedID in
+                result.insert(expandedID)
+                for ancestorID in preparedTree.ancestorIDs(of: expandedID) {
+                    if canonicalInteractionID(for: ancestorID) == expandedID {
+                        result.insert(ancestorID)
+                    }
+                }
+            }
+        } else {
+            expansionSourceIDs = nextExpansion
+        }
+
         preparedTree = nextPreparedTree
         expandedIDs = nextExpansion.filtering {
             nextPreparedTree.contains($0) && nextPreparedTree.isExpandable($0)
@@ -184,9 +198,11 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         rebuildVisibleRows()
         selection = Set(selection.map { interactionID(for: $0) })
         focusedID = focusedID.map { interactionID(for: $0) }
-        let projectedExpansion = Set(expandedIDs.map { canonicalInteractionID(for: $0) }).filtering {
-            nextPreparedTree.isExpandable($0)
-        }
+        let projectedExpansion = Set(
+            expansionSourceIDs
+                .filter(nextPreparedTree.contains)
+                .map { canonicalInteractionID(for: $0) }
+        ).filtering { nextPreparedTree.isExpandable($0) }
         if projectedExpansion != expandedIDs {
             expandedIDs = projectedExpansion
             rebuildVisibleRows()
