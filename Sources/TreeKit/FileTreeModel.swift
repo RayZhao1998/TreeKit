@@ -139,11 +139,10 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         preservingExpansion: Bool = true,
         preservingSelection: Bool = true
     ) {
-        let nextExpansion = preservingExpansion
-            ? expandedIDs.filtering {
-                nextPreparedTree.contains($0) && nextPreparedTree.isExpandable($0)
-            }
-            : []
+        // Keep the old identities until `replacePreparedTree` has recovered the canonical
+        // segments represented by a flattened terminal. The replacement topology performs the
+        // final pruning after those segments have been projected into its row boundaries.
+        let nextExpansion = preservingExpansion ? expandedIDs : []
         let nextSelection = preservingSelection
             ? selection.filtering { nextPreparedTree.contains($0) }
             : []
