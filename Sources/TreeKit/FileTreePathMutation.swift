@@ -393,10 +393,35 @@ public extension FileTreeModel where Node == FileTreePath {
         originalPreparedTree: PreparedTree<FileTreePath>,
         plan: FileTreeDropReorderPlan
     ) throws -> FileTreePathMutationState {
-        func mappedID(_ id: String) -> String {
-            plan.moves.reduce(id) { result, move in
-                moving(result, from: move.sourcePath, to: move.destinationPath)
+        let moveBySourceID = Dictionary(
+            uniqueKeysWithValues: plan.moves.map { ($0.sourcePath.id, $0) }
+        )
+        var mappedIDByOriginalID: [String: String] = [:]
+        mappedIDByOriginalID.reserveCapacity(originalPreparedTree.count)
+        var activeDirectoryMove: FileTreeDropMove?
+        for originalID in originalPreparedTree.preorderIDs {
+            if let activeDirectoryMove,
+               originalID.hasPrefix(activeDirectoryMove.sourcePath.path) {
+                mappedIDByOriginalID[originalID] = moving(
+                    originalID,
+                    from: activeDirectoryMove.sourcePath,
+                    to: activeDirectoryMove.destinationPath
+                )
+                continue
             }
+            activeDirectoryMove = nil
+            guard let move = moveBySourceID[originalID] else {
+                mappedIDByOriginalID[originalID] = originalID
+                continue
+            }
+            mappedIDByOriginalID[originalID] = move.destinationPath.id
+            if move.sourcePath.kind == .directory {
+                activeDirectoryMove = move
+            }
+        }
+
+        func mappedID(_ id: String) -> String {
+            mappedIDByOriginalID[id] ?? id
         }
 
         var roots = originalPreparedTree.rootIDs.map(mappedID).filter {

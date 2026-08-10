@@ -208,11 +208,18 @@ public extension FileTreeModel where Node == FileTreePath {
             guard selectedIDs.contains(selectedID) else { return nil }
             return preparedTree.node(for: selectedID)
         }
-        let normalized = orderedPaths.filter { candidate in
-            !orderedPaths.contains { ancestor in
-                ancestor.kind == .directory
-                    && ancestor.id != candidate.id
-                    && candidate.id.hasPrefix(ancestor.path)
+        var normalized: [FileTreePath] = []
+        normalized.reserveCapacity(orderedPaths.count)
+        var activeSelectedDirectoryPath: String?
+        for candidate in orderedPaths {
+            if let activeSelectedDirectoryPath,
+               candidate.id.hasPrefix(activeSelectedDirectoryPath) {
+                continue
+            }
+            activeSelectedDirectoryPath = nil
+            normalized.append(candidate)
+            if candidate.kind == .directory {
+                activeSelectedDirectoryPath = candidate.path
             }
         }
         guard !normalized.isEmpty else { throw FileTreeDragDropError.noSources }
