@@ -326,6 +326,26 @@ struct FileTreePathModelTests {
         #expect(model.visibleRows.map(\.id) == ["Root/Branch/Leaf/"])
     }
 
+    @Test
+    func revealDuringFilteredSearchPersistsCanonicalFlattenedExpansion() throws {
+        let prepared = try prepareFileTree(
+            paths: ["Root/Branch/Leaf/File.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+        let model = FileTreeModel(prepared, searchText: \.name)
+
+        model.openSearch(initialQuery: "branch")
+        #expect(model.visibleRows.map(\.id) == ["Root/Branch/"])
+
+        model.reveal("Root/Branch/")
+        #expect(model.expandedIDs == ["Root/Branch/Leaf/"])
+
+        model.closeSearch()
+        #expect(model.visibleRows.map(\.id) == [
+            "Root/Branch/Leaf/", "Root/Branch/Leaf/File.swift"
+        ])
+    }
+
     @Test(arguments: [FileTreeSearchMode.expandMatches, .collapseNonMatches])
     func forcedSearchExpansionUsesTheFlattenedTerminalRow(
         _ searchMode: FileTreeSearchMode
@@ -395,6 +415,24 @@ struct FileTreePathModelTests {
         #expect(model.focusedID == "Root/Branch/Leaf/")
         #expect(model.selection == ["Root/Branch/Leaf/"])
         #expect(model.visibleRow(for: "Root/Branch/")?.id == "Root/Branch/Leaf/")
+    }
+
+    @Test
+    func replacingSearchQueryRemapsASelectedTemporaryFlattenedRow() throws {
+        let prepared = try prepareFileTree(
+            paths: ["Root/Branch/Leaf/File.swift"],
+            options: .init(sort: .inputOrder, flattenEmptyDirectories: true)
+        )
+        let model = FileTreeModel(prepared, searchText: \.name)
+
+        model.openSearch(initialQuery: "branch")
+        #expect(model.visibleRows.map(\.id) == ["Root/Branch/"])
+        model.select("Root/Branch/")
+
+        model.setSearchQuery("root")
+
+        #expect(model.visibleRows.map(\.id) == ["Root/"])
+        #expect(model.selection == ["Root/"])
     }
 
     @Test
