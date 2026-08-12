@@ -36,6 +36,9 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             renameRevisionForTeardown = nil
             lastRevealSequence = nil
             bindToModel()
+            if window != nil {
+                model.startLazyRootLoadingIfNeeded()
+            }
         }
     }
 
@@ -154,6 +157,8 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         super.didMoveToWindow()
         if window == nil {
             cancelRenameForTeardown()
+        } else {
+            model.startLazyRootLoadingIfNeeded()
         }
     }
 
@@ -469,6 +474,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             isSelected: model.selection.contains(row.id),
             isFocused: model.focusedID == row.id,
             isSearchMatch: model.isSearchMatch(row.id),
+            childrenLoadState: model.childrenLoadState(for: row.id),
             isRenaming: model.activeRenamingID == row.id,
             segments: row.segments
         )

@@ -107,6 +107,28 @@ default ordering is folders first, then lexicographic by component name.
 Call `prepareFileTree(paths:options:)` directly when preparation and model construction happen
 at different layers.
 
+## Async children on demand
+
+For remote, generated, or very large hierarchies, provide roots and direct children asynchronously
+instead of preparing the complete tree up front:
+
+```swift
+let provider = FileTreeChildrenProvider<ProjectNode>(
+    roots: { try await repository.roots() },
+    mightHaveChildren: { $0.isDirectory },
+    children: { try await repository.children(of: $0.id) }
+)
+
+let model = FileTreeModel(childrenProvider: provider)
+```
+
+Mounting `FileTree` or `FileTreeView` loads roots. Expanding an unloaded branch fetches only its
+direct children, preserves their caller-provided order, and caches a successful result across
+collapse and re-expansion. Custom rows can render progress from `context.childrenLoadState`; use
+`model.rootLoadState` for a root-level loading placeholder. Search covers discovered nodes only.
+TreeKit does not own file-system scanning, watching, persistence, or provider cache invalidation.
+See [`Docs/LazyLoading.md`](Docs/LazyLoading.md) for the current lifecycle and staged roadmap.
+
 Directory-only chains can be projected as one row without changing canonical paths:
 
 ```swift

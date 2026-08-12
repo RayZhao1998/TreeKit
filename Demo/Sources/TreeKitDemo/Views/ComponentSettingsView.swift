@@ -5,6 +5,7 @@ import TreeKit
 struct ComponentSettingsView: View {
   @ObservedObject var model: FileTreeModel<FileTreePath>
   let renderer: DemoRenderer
+  let allowsPathMutations: Bool
   @Binding var configuration: FileTreeConfiguration
   @Binding var rowStyle: DemoRowStyle
   let onFocusNativeTree: () -> Void
@@ -18,6 +19,7 @@ struct ComponentSettingsView: View {
         DemoControlPanel(
           model: model,
           renderer: renderer,
+          allowsPathMutations: allowsPathMutations,
           configuration: $configuration,
           rowStyle: $rowStyle,
           onFocusNativeTree: onFocusNativeTree,

@@ -6,6 +6,7 @@ import TreeKit
 struct DemoControlPanel: View {
   @ObservedObject var model: FileTreeModel<FileTreePath>
   let renderer: DemoRenderer
+  let allowsPathMutations: Bool
   @Binding var configuration: FileTreeConfiguration
   @Binding var rowStyle: DemoRowStyle
   let onFocusNativeTree: () -> Void
@@ -19,6 +20,7 @@ struct DemoControlPanel: View {
   init(
     model: FileTreeModel<FileTreePath>,
     renderer: DemoRenderer,
+    allowsPathMutations: Bool,
     configuration: Binding<FileTreeConfiguration>,
     rowStyle: Binding<DemoRowStyle>,
     onFocusNativeTree: @escaping () -> Void,
@@ -26,6 +28,7 @@ struct DemoControlPanel: View {
   ) {
     self.model = model
     self.renderer = renderer
+    self.allowsPathMutations = allowsPathMutations
     _configuration = configuration
     _rowStyle = rowStyle
     self.onFocusNativeTree = onFocusNativeTree
@@ -192,39 +195,51 @@ struct DemoControlPanel: View {
   }
 
   private var mutationControls: some View {
-    GroupBox("Path mutations") {
-      VStack(alignment: .leading, spacing: 9) {
-        HStack(spacing: 7) {
-          Button("Add", action: addGeneratedFile)
-          Button("Move", action: moveGeneratedFile)
-            .disabled(latestGeneratedPath == nil)
-          Button("Remove", action: removeGeneratedFile)
-            .disabled(latestGeneratedPath == nil)
-          Button("Atomic batch", action: applyBatch)
-          Button("Reset fixture", action: resetFixture)
-        }
+    VStack(alignment: .leading, spacing: 6) {
+      GroupBox("Path mutations") {
+        VStack(alignment: .leading, spacing: 9) {
+          HStack(spacing: 7) {
+            Button("Add", action: addGeneratedFile)
+            Button("Move", action: moveGeneratedFile)
+              .disabled(latestGeneratedPath == nil)
+            Button("Remove", action: removeGeneratedFile)
+              .disabled(latestGeneratedPath == nil)
+            Button("Atomic batch", action: applyBatch)
+            Button("Reset fixture", action: resetFixture)
+          }
 
-        HStack {
-          Picker("Path sort", selection: $pathSort) {
-            ForEach(DemoPathSort.allCases) { sort in
-              Text(sort.title).tag(sort)
+          HStack {
+            Picker("Path sort", selection: $pathSort) {
+              ForEach(DemoPathSort.allCases) { sort in
+                Text(sort.title).tag(sort)
+              }
+            }
+            .pickerStyle(.menu)
+
+            Button("Apply sort") {
+              performMutation {
+                try model.resetPaths(
+                  DemoData.paths,
+                  options: .init(sort: pathSort.treeKitValue)
+                )
+                latestGeneratedPath = nil
+              }
             }
           }
-          .pickerStyle(.menu)
-
-          Button("Apply sort") {
-            performMutation {
-              try model.resetPaths(
-                DemoData.paths,
-                options: .init(sort: pathSort.treeKitValue)
-              )
-              latestGeneratedPath = nil
-            }
-          }
         }
+        .controlSize(.small)
+        .padding(.top, 4)
       }
-      .controlSize(.small)
-      .padding(.top, 4)
+      .disabled(!allowsPathMutations)
+
+      if !allowsPathMutations {
+        Label(
+          "Switch to Eager to edit the complete path fixture.",
+          systemImage: "info.circle"
+        )
+        .font(.caption)
+        .foregroundStyle(.secondary)
+      }
     }
   }
 

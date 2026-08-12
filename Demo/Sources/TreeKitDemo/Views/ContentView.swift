@@ -8,14 +8,19 @@ struct ContentView: View {
   // lifetime without invalidating this entire split view for every expansion or selection.
   @State private var model: FileTreeModel<FileTreePath>
   @State private var renderer: DemoRenderer
+  @State private var dataSource: DemoDataSource
   @State private var configuration: FileTreeConfiguration
   @State private var rowStyle: DemoRowStyle = .custom
   @State private var nativeFocusRequest = 0
   @State private var nativeReloadRequest = 0
 
   init() {
-    _model = State(initialValue: DemoData.makeModel())
-    let renderer = ProcessInfo.processInfo.environment["TREEKIT_PERF_RENDERER"]
+    let environment = ProcessInfo.processInfo.environment
+    let dataSource = environment["TREEKIT_DEMO_DATA_SOURCE"]
+      .flatMap(DemoDataSource.init(rawValue:)) ?? .eager
+    _model = State(initialValue: DemoData.makeModel(dataSource: dataSource))
+    _dataSource = State(initialValue: dataSource)
+    let renderer = environment["TREEKIT_PERF_RENDERER"]
       .flatMap(DemoRenderer.init(rawValue:)) ?? .swiftUI
     _renderer = State(initialValue: renderer)
     _configuration = State(
@@ -42,15 +47,20 @@ struct ContentView: View {
         ComponentSettingsView(
           model: model,
           renderer: renderer,
+          allowsPathMutations: dataSource == .eager,
           configuration: $configuration,
           rowStyle: $rowStyle,
           onFocusNativeTree: { nativeFocusRequest &+= 1 },
           onReloadNativeRows: { nativeReloadRequest &+= 1 }
         )
+          .id(ObjectIdentifier(model))
           .frame(minWidth: 460, maxWidth: .infinity, maxHeight: .infinity)
       }
     }
     .frame(minWidth: 860, minHeight: 560)
+    .onChange(of: dataSource) { nextDataSource in
+      model = DemoData.makeModel(dataSource: nextDataSource)
+    }
     .task {
       await runPerformanceScenarioIfRequested()
     }
@@ -142,6 +152,16 @@ struct ContentView: View {
 
       Spacer(minLength: 24)
 
+      Picker("Data source", selection: $dataSource) {
+        ForEach(DemoDataSource.allCases) { source in
+          Text(source.title).tag(source)
+        }
+      }
+      .labelsHidden()
+      .pickerStyle(.segmented)
+      .frame(width: 124)
+      .help(dataSource.summary)
+
       Link(destination: DemoData.sourceURL) {
         Label("PR #\(DemoData.pullRequest)", systemImage: "arrow.up.right.square")
       }
@@ -167,6 +187,7 @@ struct ContentView: View {
       }
       .buttonStyle(.borderedProminent)
       .help("Reveal \(DemoData.revealTarget)")
+      .disabled(!model.preparedTree.contains(DemoData.revealTarget))
     }
     .controlSize(.small)
     .padding(.horizontal, 16)
@@ -182,6 +203,9 @@ struct ContentView: View {
             .font(.headline)
           Text(renderer.componentName)
             .font(.system(.caption, design: .monospaced))
+            .foregroundStyle(.secondary)
+          Text(dataSource.summary)
+            .font(.caption2)
             .foregroundStyle(.secondary)
         }
 
@@ -200,6 +224,7 @@ struct ContentView: View {
       .padding(.vertical, 11)
 
       TreeSearchBar(model: model)
+        .id(ObjectIdentifier(model))
 
       Divider()
 
@@ -208,7 +233,7 @@ struct ContentView: View {
 
       Divider()
 
-      TreeStatusBar(model: model)
+      TreeStatusBar(model: model, dataSource: dataSource)
     }
   }
 
@@ -340,12 +365,22 @@ private struct TreeSearchBar: View {
 @MainActor
 private struct TreeStatusBar: View {
   @ObservedObject var model: FileTreeModel<FileTreePath>
+  let dataSource: DemoDataSource
 
   var body: some View {
     HStack(spacing: 7) {
-      Circle()
-        .fill(.green)
-        .frame(width: 7, height: 7)
+      if dataSource == .lazy, model.rootLoadState != .loaded {
+        ProgressView()
+          .controlSize(.mini)
+      } else {
+        Circle()
+          .fill(.green)
+          .frame(width: 7, height: 7)
+      }
+      Text(dataSource.title)
+        .fontWeight(.medium)
+      Text("·")
+        .foregroundStyle(.tertiary)
       Text("\(model.visibleRows.count) visible")
       if model.isSearchOpen {
         Text("·")
@@ -359,7 +394,7 @@ private struct TreeStatusBar: View {
         .foregroundStyle(.tertiary)
       Text("\(model.preparedTree.count.formatted()) nodes")
       Spacer()
-      Text("shared model")
+      Text(dataSource == .lazy ? "on-demand model" : "shared model")
         .foregroundStyle(.secondary)
     }
     .font(.caption)
