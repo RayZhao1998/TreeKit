@@ -15,9 +15,10 @@ TreeKit 1.x 有意采用 eager（一次性完整加载）的 `PreparedTree`。�
 最终，eager adapter 应当与懒加载 provider 使用同一套内部节点存储，让 renderer 共享
 同一个状态机，而不是维护两套并行实现。
 
-在公开 provider 之前，renderer 代码应停止通过 model 的公共 `preparedTree` 属性直接查询。
-应当由 model 提供一组精简的查询接口，包括节点、父节点、子节点、深度、兄弟位置和是否可展开。
-这样可以更换底层存储，而不会把 arena 或缓存布局泄漏到 UI 接口中。
+renderer 已经不再通过 model 的公共 `preparedTree` 属性直接查询，而是使用 model 拥有的精简
+查询接口，包括节点、父节点、子节点、深度、兄弟位置和是否可展开。现有 eager 模式通过
+`PreparedTree` adapter 回答这些查询。引入 provider 时应替换 adapter 背后的存储，而不应把
+arena 或缓存布局泄漏到 UI 接口中。
 
 ## Provider 边界
 

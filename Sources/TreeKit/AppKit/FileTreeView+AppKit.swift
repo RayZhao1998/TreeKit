@@ -211,7 +211,7 @@ public final class FileTreeView<Node: Identifiable>: NSView {
         if configuration.selectionMode == .single, normalizedSelection.count > 1 {
             if let focusedID = model.focusedID, normalizedSelection.contains(focusedID) {
                 normalizedSelection = [focusedID]
-            } else if let firstSelectedID = model.preparedTree.preorderIDs
+            } else if let firstSelectedID = model.knownNodeIDsInPreorder
                 .first(where: normalizedSelection.contains) {
                 normalizedSelection = [firstSelectedID]
             }
@@ -328,8 +328,8 @@ private extension FileTreeView {
             var searchChanged = false
             if appliedDataRevision != owner.model.dataRevision {
                 boxesByID.removeAll(keepingCapacity: true)
-                boxesByID.reserveCapacity(owner.model.preparedTree.count)
-                for id in owner.model.preparedTree.preorderIDs {
+                boxesByID.reserveCapacity(owner.model.knownNodeCount)
+                for id in owner.model.knownNodeIDsInPreorder {
                     boxesByID[id] = ItemBox(id: id)
                 }
                 outlineView.reloadData()
@@ -582,7 +582,7 @@ private extension FileTreeView {
             guard
                 let owner,
                 let box = item as? ItemBox,
-                let node = owner.model.preparedTree.node(for: box.id)
+                let node = owner.model.knownNode(for: box.id)
             else { return nil }
 
             let cell = (outlineView.makeView(withIdentifier: Self.cellIdentifier, owner: nil)
@@ -696,7 +696,7 @@ private extension FileTreeView {
                 let owner,
                 sender.clickedRow >= 0,
                 let box = sender.item(atRow: sender.clickedRow) as? ItemBox,
-                let node = owner.model.preparedTree.node(for: box.id)
+                let node = owner.model.knownNode(for: box.id)
             else { return }
 
             if owner.configuration.expandsBranchesOnDoubleClick,
@@ -755,7 +755,7 @@ private extension FileTreeView {
         ) -> FileTreeDropTarget? {
             let parentPath = (item as? ItemBox)
                 .flatMap { $0.id as? String }
-                .flatMap { model.preparedTree.node(for: $0) }
+                .flatMap { model.knownNode(for: $0) }
             if index == NSOutlineViewDropOnItemIndex {
                 guard let parentPath else { return .init(path: nil, position: .inside) }
                 return model.renderedDropTarget(for: parentPath.id, position: .inside)
@@ -768,11 +768,11 @@ private extension FileTreeView {
                 childIDs = model.renderedRootIDs
             }
             if childIDs.indices.contains(index),
-               let child = model.preparedTree.node(for: childIDs[index]) {
+               let child = model.knownNode(for: childIDs[index]) {
                 return model.renderedDropTarget(for: child.id, position: .before)
             }
             if let lastID = childIDs.last,
-               let last = model.preparedTree.node(for: lastID) {
+               let last = model.knownNode(for: lastID) {
                 return model.renderedDropTarget(for: last.id, position: .after)
             }
             if let parentPath {
@@ -824,16 +824,17 @@ private extension FileTreeView {
             guard let owner else {
                 preconditionFailure("A mounted tree coordinator must have an owner")
             }
-            let tree = owner.model.preparedTree
             let projectedRow = owner.model.visibleRow(for: id)
             let visibleIndex = boxesByID[id].map { outlineView.row(forItem: $0) } ?? -1
             return FileTreeRowContext(
                 id: id,
                 visibleIndex: visibleIndex,
-                depth: projectedRow?.depth ?? tree.depthByID[id] ?? 0,
-                parentID: projectedRow?.parentID ?? tree.parentByID[id],
-                siblingIndex: projectedRow?.siblingIndex ?? tree.siblingIndexByID[id] ?? 0,
-                siblingCount: projectedRow?.siblingCount ?? tree.siblingCount(of: id),
+                depth: projectedRow?.depth ?? owner.model.knownDepth(of: id) ?? 0,
+                parentID: projectedRow?.parentID ?? owner.model.knownParentID(of: id),
+                siblingIndex: projectedRow?.siblingIndex
+                    ?? owner.model.knownSiblingIndex(of: id) ?? 0,
+                siblingCount: projectedRow?.siblingCount
+                    ?? owner.model.knownSiblingCount(of: id),
                 isExpandable: owner.model.isRenderedExpandable(id),
                 isExpanded: owner.model.isRenderedExpanded(id),
                 isSelected: owner.model.selection.contains(id),
@@ -843,7 +844,7 @@ private extension FileTreeView {
                 segments: projectedRow?.segments ?? [
                     FileTreeRowSegment(
                         id: id,
-                        label: (tree.nodesByID[id] as? FileTreePath)?.name
+                        label: (owner.model.knownNode(for: id) as? FileTreePath)?.name
                             ?? String(describing: id),
                         isTerminal: true
                     )
@@ -859,8 +860,8 @@ private extension FileTreeView {
             let collapsing = knownNativeExpandedIDs.subtracting(target)
                 .union(pendingCollapseIDs)
                 .sorted {
-                (owner.model.preparedTree.depth(of: $0) ?? 0)
-                    > (owner.model.preparedTree.depth(of: $1) ?? 0)
+                (owner.model.knownDepth(of: $0) ?? 0)
+                    > (owner.model.knownDepth(of: $1) ?? 0)
             }
             for id in collapsing {
                 if let box = boxesByID[id] {
@@ -890,8 +891,8 @@ private extension FileTreeView {
             })
 
             let expanding = target.subtracting(appliedExpandedIDs).sorted {
-                (owner.model.preparedTree.depth(of: $0) ?? 0)
-                    < (owner.model.preparedTree.depth(of: $1) ?? 0)
+                (owner.model.knownDepth(of: $0) ?? 0)
+                    < (owner.model.knownDepth(of: $1) ?? 0)
             }
             for id in expanding {
                 if let box = boxesByID[id] {
@@ -906,8 +907,8 @@ private extension FileTreeView {
             // A newly expanded ancestor can reveal a pending native branch that the model has
             // since collapsed. Retry only those known IDs instead of scanning the complete tree.
             let retryingCollapse = pendingCollapseIDs.sorted {
-                (owner.model.preparedTree.depth(of: $0) ?? 0)
-                    > (owner.model.preparedTree.depth(of: $1) ?? 0)
+                (owner.model.knownDepth(of: $0) ?? 0)
+                    > (owner.model.knownDepth(of: $1) ?? 0)
             }
             for id in retryingCollapse {
                 if let box = boxesByID[id] {

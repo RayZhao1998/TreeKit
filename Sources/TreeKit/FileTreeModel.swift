@@ -11,6 +11,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// The immutable hierarchy currently presented by the model.
     public private(set) var preparedTree: PreparedTree<Node>
 
+    /// The eager adapter currently backing model-owned hierarchy queries.
+    ///
+    /// Keep renderer access behind the query methods below so a lazy store can replace this
+    /// concrete adapter without changing native rendering code.
+    private var hierarchyQuery: PreparedTreeHierarchyQuery<Node>
+
     /// Stable identity-based selection. Selection may contain collapsed descendants.
     public private(set) var selection: Set<Node.ID>
 
@@ -102,6 +108,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         let expandedIDs = Self.expandedIDs(for: initialExpansion, in: preparedTree)
         let pathOptions = (preparedTree as? PreparedTree<FileTreePath>)?.fileTreePathOptions
         self.preparedTree = preparedTree
+        self.hierarchyQuery = PreparedTreeHierarchyQuery(preparedTree)
         self.selection = selection
         self.expandedIDs = expandedIDs
         self.focusedID = preparedTree.preorderIDs.first { selection.contains($0) }
@@ -190,6 +197,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         }
 
         preparedTree = nextPreparedTree
+        hierarchyQuery = PreparedTreeHierarchyQuery(nextPreparedTree)
         expandedIDs = nextExpansion.filtering {
             nextPreparedTree.contains($0) && nextPreparedTree.isExpandable($0)
         }
@@ -623,13 +631,51 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         return visibleRows[index]
     }
 
+    // MARK: - Renderer hierarchy queries
+
+    /// The number of nodes discovered by the model's current hierarchy store.
+    internal var knownNodeCount: Int { hierarchyQuery.count }
+
+    /// Discovered identities in stable depth-first preorder.
+    internal var knownNodeIDsInPreorder: [Node.ID] { hierarchyQuery.preorderIDs }
+
+    /// Returns one discovered node without exposing its backing store.
+    internal func knownNode(for id: Node.ID) -> Node? {
+        hierarchyQuery.node(for: id)
+    }
+
+    /// Returns a discovered node's raw parent, before search or flattened-row projection.
+    internal func knownParentID(of id: Node.ID) -> Node.ID? {
+        hierarchyQuery.parentID(of: id)
+    }
+
+    /// Returns a discovered node's raw hierarchy depth.
+    internal func knownDepth(of id: Node.ID) -> Int? {
+        hierarchyQuery.depth(of: id)
+    }
+
+    /// Returns a discovered node's raw zero-based sibling position.
+    internal func knownSiblingIndex(of id: Node.ID) -> Int? {
+        hierarchyQuery.siblingIndex(of: id)
+    }
+
+    /// Returns the number of siblings in a discovered node's raw hierarchy level.
+    internal func knownSiblingCount(of id: Node.ID) -> Int {
+        hierarchyQuery.siblingCount(of: id)
+    }
+
+    /// Returns whether a discovered node has known children in the backing hierarchy.
+    internal func isKnownExpandable(_ id: Node.ID) -> Bool {
+        hierarchyQuery.isExpandable(id)
+    }
+
     internal var renderedRootIDs: [Node.ID] {
-        renderedRowIDs(startingAt: preparedTree.rootIDs)
+        renderedRowIDs(startingAt: hierarchyQuery.rootIDs)
     }
 
     internal func renderedChildIDs(of id: Node.ID) -> [Node.ID] {
         let terminalID = interactionID(for: id)
-        return renderedRowIDs(startingAt: preparedTree.childrenByID[terminalID] ?? [])
+        return renderedRowIDs(startingAt: hierarchyQuery.childIDs(of: terminalID))
     }
 
     internal func isRenderedExpandable(_ id: Node.ID) -> Bool {
