@@ -6,8 +6,9 @@ TreeKit 1.x 有意采用 eager（一次性完整加载）的 `PreparedTree`。�
 就不再是合适的权衡。
 
 TreeKit 现在已经提供第一阶段的 provider-backed hierarchy：roots 和直接 children 可以按需
-异步加载，三种 renderer 共享同一个 model 状态，成功结果在 model 生命周期内保留。竞态合并、
-reset generation、失败呈现、异步 reveal 和大规模性能门槛仍按本文后半部分的路线逐步补齐。
+异步加载，三种 renderer 共享同一个 model 状态，成功结果在 model 生命周期内保留。同分支竞态
+会被合并，provider reset 使用 generation 隔离旧结果；持久失败呈现、异步 reveal 和大规模性能
+门槛仍按本文后半部分的路线逐步补齐。
 
 ## 保留 eager 路径
 
@@ -45,7 +46,8 @@ where Node: Sendable, Node.ID: Sendable {}
 unloaded -> loading -> loaded
 ```
 
-- 默认情况下，折叠节点不会丢弃已经成功加载的结果，避免反复展开和折叠造成抖动。
+- 加载期间折叠只撤销展开意图，不取消 provider operation；成功结果仍会缓存，节点保持折叠，
+  再次展开不会重复请求。
 - 加载完成的子节点必须先验证其 ID 是否稳定且全局唯一，然后才能通过一次原子 model transaction
   发布。
 
@@ -67,8 +69,21 @@ renderer 挂载时会自动请求 roots，也可以在挂载前显式调用 `try
 展开 `.unloaded` 的目录会自动请求直接 children；成功后 collapse/re-expand 命中缓存。搜索只覆盖
 已经发现的节点，外部文件系统扫描、watch、缓存失效与持久化仍由调用方负责。
 
-下一阶段会补充同节点 task 合并、collapse/reset 取消、generation 拒绝旧结果；随后再加入
-`.failed`、错误呈现和 retry。这些行为在对应阶段完成前不应被调用方假设。
+## 并发与 generation
+
+同一个 generation 内，并发的 roots 请求共享一个 operation；同一节点的并发 children 请求也共享
+一个 operation。重复展开加载中的目录不会增加 provider 调用或重复发布节点，不同目录仍可独立并发。
+所有显式调用者会收到同一个被接受的结果或错误。
+
+`reset(childrenProvider:initialExpansion:initialSelection:)` 会先推进 generation 并取消 model 拥有的
+operation，再清空旧 hierarchy、安装新 provider。即使旧 provider 不响应 cancellation，延迟返回的
+成功或失败也无法修改新 generation；等待旧 operation 的调用者会收到 `CancellationError`。已挂载
+model 在 provider reset 后需要显式调用 `loadRoots()`，因为新 roots 有意保持 `.unloaded`。
+
+内部自动加载任务不会强持有 model。一个无关分支完成时，transaction 以当时最新的 selection、focus、
+嵌套 expansion 和已加载 sibling 为基础合并结果，而不是恢复 operation 启动时的旧快照。下一阶段仍会
+加入 `.failed`、错误呈现和 retry；当前 generation 的失败会共享给调用者并退回 `.unloaded`，旧
+generation 的失败则被忽略。
 
 ## Reveal 与缓存
 
@@ -98,7 +113,8 @@ Demo 已经遵循第 3 项：Git 状态存放在 `FileTreePath` 之外。TreeKit
 
 ## 验收条件
 
-完整路线只有在测试覆盖以下场景时才算准备就绪：取消、过期结果、重试、重复 ID、隐藏节点展开、
-通过未加载祖先执行 reveal、加载期间 reset、选择状态保留、确定性排序和缓存策略。性能验证应当对比
-2,500、100,000 以及至少 500,000 个潜在节点下的 eager 和 lazy 模式，并报告已加载节点数量、
-physical footprint、峰值 footprint、主线程耗时和可见内容更新延迟。
+当前竞态层测试已经覆盖同节点合并、加载期间 collapse、reset 前后的取消、过期成功与失败、状态保留，
+以及 model 释放。完整路线仍需要覆盖 retry、重复 ID、隐藏节点展开、通过未加载祖先执行 reveal、
+确定性排序和缓存策略。性能验证应当对比 2,500、100,000 以及至少 500,000 个潜在节点下的 eager
+和 lazy 模式，并报告已加载节点数量、physical footprint、峰值 footprint、主线程耗时和可见内容
+更新延迟。

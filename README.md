@@ -123,8 +123,10 @@ let model = FileTreeModel(childrenProvider: provider)
 ```
 
 Mounting `FileTree` or `FileTreeView` loads roots. Expanding an unloaded branch fetches only its
-direct children, preserves their caller-provided order, and caches a successful result across
-collapse and re-expansion. Custom rows can render progress from `context.childrenLoadState`; use
+direct children, preserves their caller-provided order, coalesces concurrent requests for the same
+branch, and caches a successful result across collapse and re-expansion. Resetting the model or
+replacing its provider cancels known work and prevents obsolete results from changing the current
+generation. Custom rows can render progress from `context.childrenLoadState`; use
 `model.rootLoadState` for a root-level loading placeholder. Search covers discovered nodes only.
 TreeKit does not own file-system scanning, watching, persistence, or provider cache invalidation.
 See [`Docs/LazyLoading.md`](Docs/LazyLoading.md) for the current lifecycle and staged roadmap.

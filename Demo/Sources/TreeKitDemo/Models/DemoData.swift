@@ -126,6 +126,7 @@ enum DemoData {
 
   static let initialSelection = "src/bun.zig"
   static let revealTarget = "src/runtime/cli/cli.zig"
+  static let lazyRaceTarget = ".claude/"
   static let performanceTargets: [String] = {
     let sampleCount = min(300, paths.count)
     guard sampleCount > 1 else { return paths }
@@ -138,17 +139,28 @@ enum DemoData {
 
   @MainActor
   static func makeModel() -> FileTreeModel<FileTreePath> {
-    makeModel(dataSource: .eager)
+    makeModel(
+      dataSource: .eager,
+      lazyRaceController: makeLazyRaceController()
+    )
   }
 
   @MainActor
-  static func makeModel(dataSource: DemoDataSource) -> FileTreeModel<FileTreePath> {
+  static func makeModel(
+    dataSource: DemoDataSource,
+    lazyRaceController: DemoLazyRaceController
+  ) -> FileTreeModel<FileTreePath> {
     switch dataSource {
     case .eager:
       makeEagerModel()
     case .lazy:
-      makeLazyModel()
+      makeLazyModel(controller: lazyRaceController)
     }
+  }
+
+  @MainActor
+  static func makeLazyRaceController() -> DemoLazyRaceController {
+    DemoLazyRaceController(catalog: lazyCatalog)
   }
 
   @MainActor
@@ -165,23 +177,11 @@ enum DemoData {
   }
 
   @MainActor
-  private static func makeLazyModel() -> FileTreeModel<FileTreePath> {
-    let catalog = lazyCatalog
-    let provider = FileTreeChildrenProvider<FileTreePath>(
-      roots: {
-        try await Task.sleep(for: .milliseconds(600))
-        return catalog.roots
-      },
-      mightHaveChildren: { node in
-        catalog.isExpandable(node.id)
-      },
-      children: { node in
-        try await Task.sleep(for: .milliseconds(350))
-        return catalog.children(of: node.id)
-      }
-    )
+  private static func makeLazyModel(
+    controller: DemoLazyRaceController
+  ) -> FileTreeModel<FileTreePath> {
     return FileTreeModel(
-      childrenProvider: provider,
+      childrenProvider: controller.makeInitialProvider(),
       initialExpansion: .collapsed,
       initialSelection: [],
       searchMode: .hideNonMatches,

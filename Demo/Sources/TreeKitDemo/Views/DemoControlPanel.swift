@@ -5,7 +5,9 @@ import TreeKit
 @MainActor
 struct DemoControlPanel: View {
   @ObservedObject var model: FileTreeModel<FileTreePath>
+  @ObservedObject var lazyRaceController: DemoLazyRaceController
   let renderer: DemoRenderer
+  let dataSource: DemoDataSource
   let allowsPathMutations: Bool
   @Binding var configuration: FileTreeConfiguration
   @Binding var rowStyle: DemoRowStyle
@@ -19,7 +21,9 @@ struct DemoControlPanel: View {
 
   init(
     model: FileTreeModel<FileTreePath>,
+    lazyRaceController: DemoLazyRaceController,
     renderer: DemoRenderer,
+    dataSource: DemoDataSource,
     allowsPathMutations: Bool,
     configuration: Binding<FileTreeConfiguration>,
     rowStyle: Binding<DemoRowStyle>,
@@ -27,7 +31,9 @@ struct DemoControlPanel: View {
     onReloadNativeRows: @escaping () -> Void
   ) {
     self.model = model
+    self.lazyRaceController = lazyRaceController
     self.renderer = renderer
+    self.dataSource = dataSource
     self.allowsPathMutations = allowsPathMutations
     _configuration = configuration
     _rowStyle = rowStyle
@@ -44,6 +50,9 @@ struct DemoControlPanel: View {
 
       configurationControls
       navigationControls
+      if dataSource == .lazy {
+        lazyRaceControls
+      }
       mutationControls
       renameControls
       dragDropControls
@@ -240,6 +249,116 @@ struct DemoControlPanel: View {
         .font(.caption)
         .foregroundStyle(.secondary)
       }
+    }
+  }
+
+  private var lazyRaceControls: some View {
+    GroupBox("Lazy loading races") {
+      VStack(alignment: .leading, spacing: 9) {
+        HStack(spacing: 7) {
+          Button("Expand ×3", action: startCoalescedExpansion)
+            .disabled(
+              !model.preparedTree.contains(lazyRaceController.targetID)
+                || model.childrenLoadState(for: lazyRaceController.targetID) != .unloaded
+            )
+            .help("Expand three times and join three callers to one provider operation")
+          Button("Collapse loading") {
+            model.collapse(lazyRaceController.targetID)
+          }
+          .disabled(
+            model.childrenLoadState(for: lazyRaceController.targetID) != .loading
+              || !model.expandedIDs.contains(lazyRaceController.targetID)
+          )
+          .help("Collapse without cancelling or discarding the in-flight result")
+          Button("Reset provider", action: resetLazyProvider)
+            .help("Install a new provider generation on the same model")
+          Button(
+            lazyRaceController.completionButtonTitle,
+            action: lazyRaceController.completePendingLoad
+          )
+          .disabled(!lazyRaceController.hasPendingLoad)
+          .help("Release the Demo provider even if its operation was cancelled")
+        }
+
+        VStack(alignment: .leading, spacing: 3) {
+          Text(lazyTargetSummary)
+          Text(
+            "generation \(lazyRaceController.generation) · requests "
+              + "\(lazyRaceController.currentRequestCount)/\(lazyRaceController.totalRequestCount) "
+              + "current/total · provider calls "
+              + "\(lazyRaceController.currentProviderCallCount)/"
+              + "\(lazyRaceController.totalProviderCallCount)"
+          )
+          Text(
+            "pending \(lazyRaceController.currentPendingCount) current, "
+              + "\(lazyRaceController.stalePendingCount) stale · completed "
+              + "\(lazyRaceController.acceptedRequestCount) accepted, "
+              + "\(lazyRaceController.obsoleteRequestCount) stale, "
+              + "\(lazyRaceController.failedRequestCount) failed"
+          )
+        }
+        .font(.system(.caption, design: .monospaced))
+        .foregroundStyle(.secondary)
+
+        Label(lazyRaceController.lastOutcome, systemImage: "arrow.triangle.2.circlepath")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+      }
+      .controlSize(.small)
+      .padding(.top, 4)
+    }
+  }
+
+  private var lazyTargetSummary: String {
+    let targetID = lazyRaceController.targetID
+    guard model.preparedTree.contains(targetID) else {
+      return "\(targetID) · roots \(model.rootLoadState.demoTitle)"
+    }
+    let expansion = model.expandedIDs.contains(targetID) ? "expanded" : "collapsed"
+    return "\(targetID) · \(model.childrenLoadState(for: targetID).demoTitle) · \(expansion)"
+  }
+
+  private func startCoalescedExpansion() {
+    let targetID = lazyRaceController.targetID
+    guard model.preparedTree.contains(targetID) else { return }
+    let requestGeneration = lazyRaceController.generation
+    let requestCount = 3
+    lazyRaceController.recordLoadRequests(requestCount, generation: requestGeneration)
+
+    for _ in 0..<requestCount {
+      model.expand(targetID)
+    }
+    for _ in 0..<requestCount {
+      Task { @MainActor in
+        do {
+          _ = try await model.loadChildren(of: targetID)
+          lazyRaceController.recordRequestCompletion(
+            generation: requestGeneration,
+            result: .accepted
+          )
+        } catch is CancellationError {
+          lazyRaceController.recordRequestCompletion(
+            generation: requestGeneration,
+            result: .obsolete
+          )
+        } catch {
+          lazyRaceController.recordRequestCompletion(
+            generation: requestGeneration,
+            result: .failed
+          )
+        }
+      }
+    }
+  }
+
+  private func resetLazyProvider() {
+    model.reset(
+      childrenProvider: lazyRaceController.makeReplacementProvider(),
+      initialExpansion: .collapsed,
+      initialSelection: []
+    )
+    Task { @MainActor in
+      try? await model.loadRoots()
     }
   }
 
@@ -495,6 +614,16 @@ private extension FileTreeBuiltInIconSet {
     case .standard: "Standard"
     case .complete: "Complete"
     case .none: "None"
+    }
+  }
+}
+
+private extension FileTreeChildrenLoadState {
+  var demoTitle: String {
+    switch self {
+    case .unloaded: "unloaded"
+    case .loading: "loading"
+    case .loaded: "loaded"
     }
   }
 }

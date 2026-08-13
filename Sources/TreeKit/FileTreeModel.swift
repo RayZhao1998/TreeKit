@@ -112,8 +112,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     internal var lazyInitialSelectionStorage: Set<Node.ID>?
     internal var lazyRendererFallbackSelectionStorage: Set<Node.ID>?
     internal var lazyExpandAllRequested = false
+    internal var lazyLoadGeneration: UInt64 = 0
+    internal var lazyLoadSequence: UInt64 = 0
+    internal var lazyRootOperation: FileTreeLazyLoadOperation<Node>?
+    internal var lazyChildOperationsByID: [Node.ID: FileTreeLazyLoadOperation<Node>] = [:]
     internal var requestLazyRootLoad: (@MainActor () -> Void)?
-    internal var requestLazyChildrenLoad: (@MainActor (Node.ID) -> Void)?
+    internal var requestLazyChildrenLoad: (@MainActor (Set<Node.ID>) -> Bool)?
 
     /// Creates a stable tree model from prepared data.
     public init(
@@ -245,6 +249,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     internal func clearLazyLoadingConfiguration() {
+        invalidateLazyLoadingOperations()
         lazyChildrenProvider = nil
         lazyRootNodes = []
         lazyChildrenByID = [:]
@@ -257,6 +262,18 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         requestLazyRootLoad = nil
         requestLazyChildrenLoad = nil
         rootLoadState = .loaded
+    }
+
+    private func invalidateLazyLoadingOperations() {
+        lazyLoadGeneration &+= 1
+        let rootTask = lazyRootOperation?.task
+        let childTasks = lazyChildOperationsByID.values.map(\.task)
+        lazyRootOperation = nil
+        lazyChildOperationsByID = [:]
+        rootTask?.cancel()
+        for task in childTasks {
+            task.cancel()
+        }
     }
 
     internal func pathMutationSubject() -> PassthroughSubject<
@@ -789,8 +806,6 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     internal func startLazyRootLoadingIfNeeded() {
         guard rootLoadState == .unloaded else { return }
-        rootLoadState = .loading
-        publishLoadStateChange()
         requestLazyRootLoad?()
     }
 
@@ -801,18 +816,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     @discardableResult
     internal func startLazyChildrenLoadingIfNeeded(for ids: Set<Node.ID>) -> Bool {
-        let orderedIDs = knownNodeIDsInPreorder.filter {
-            ids.contains($0) && lazyChildrenLoadStates[$0] == .unloaded
-        }
-        guard !orderedIDs.isEmpty else { return false }
-        for id in orderedIDs {
-            lazyChildrenLoadStates[id] = .loading
-        }
-        publishLoadStateChange(for: Set(orderedIDs))
-        for id in orderedIDs {
-            requestLazyChildrenLoad?(id)
-        }
-        return true
+        requestLazyChildrenLoad?(ids) ?? false
     }
 
     internal func publishLoadStateChange(for ids: Set<Node.ID> = []) {
