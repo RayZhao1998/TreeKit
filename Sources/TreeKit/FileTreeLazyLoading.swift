@@ -246,9 +246,15 @@ extension FileTreeModel {
         in tree: PreparedTree<Node>,
         adding nodes: [Node]
     ) -> LazyInitialState {
-        let selectedIDs = Set(lazyInitialSelection.filter(tree.contains))
+        var pendingSelection = lazyInitialSelection
+        let selectedIDs = pendingSelection.intersection(Set(nodes.map(\.id)))
+        pendingSelection.subtract(selectedIDs)
+        lazyInitialSelection = pendingSelection
         let expandedIDs = Set(nodes.compactMap { node -> Node.ID? in
             guard lazyPotentiallyExpandableIDs.contains(node.id) else { return nil }
+            if lazyExpandAllRequested {
+                return node.id
+            }
             switch lazyInitialExpansion {
             case .collapsed:
                 return nil
@@ -272,5 +278,8 @@ extension FileTreeModel {
 
     private func startInitiallyExpandedLazyLoads() {
         startLazyChildrenLoadingIfNeeded(for: expandedIDs)
+        if lazyExpandAllRequested && lazyPotentiallyExpandableIDs.isEmpty {
+            lazyExpandAllRequested = false
+        }
     }
 }

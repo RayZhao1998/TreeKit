@@ -48,6 +48,7 @@ private actor LazyProviderProbe {
 @MainActor
 struct FileTreeLazyLoadingTests {
     private enum WaitError: Error {
+        case timedOutWaitingForRoots(FileTreeChildrenLoadState)
         case timedOutWaitingForChildren(String, FileTreeChildrenLoadState)
     }
 
@@ -83,6 +84,19 @@ struct FileTreeLazyLoadingTests {
             await Task.yield()
         }
         throw WaitError.timedOutWaitingForChildren(id, expectedState)
+    }
+
+    private func waitForRoots(
+        in model: FileTreeModel<LazyTestNode>,
+        toReach expectedState: FileTreeChildrenLoadState = .loaded
+    ) async throws {
+        for _ in 0..<256 {
+            if model.rootLoadState == expectedState {
+                return
+            }
+            await Task.yield()
+        }
+        throw WaitError.timedOutWaitingForRoots(expectedState)
     }
 
     @Test
@@ -254,6 +268,26 @@ struct FileTreeLazyLoadingTests {
     }
 
     @Test
+    func collapseAllCancelsPendingExpandAllTraversal() async throws {
+        let root = LazyTestNode("root", mightHaveChildren: true)
+        let child = LazyTestNode("child")
+        let probe = LazyProviderProbe(
+            roots: [root],
+            childrenByID: [root.id: [child]]
+        )
+        let model = makeModel(probe: probe)
+
+        model.expandAll()
+        model.collapseAll()
+
+        try await waitForRoots(in: model)
+
+        #expect(model.expandedIDs.isEmpty)
+        #expect(model.visibleRows.map(\.id) == [root.id])
+        #expect(await probe.childCalls(for: root.id) == 0)
+    }
+
+    @Test
     func duplicateDiscoveredIdentityDoesNotPublishPartialChildren() async throws {
         let root = LazyTestNode("root", mightHaveChildren: true)
         let probe = LazyProviderProbe(
@@ -296,6 +330,62 @@ struct FileTreeLazyLoadingTests {
 
         #expect(model.visibleRows.map(\.id) == [root.id, child.id])
         #expect(await probe.childCalls(for: root.id) == 1)
+    }
+
+    @Test
+    func consumedInitialSelectionDoesNotOverrideLaterUserInteraction() async throws {
+        let initiallySelected = LazyTestNode("selected")
+        let branch = LazyTestNode("branch", mightHaveChildren: true)
+        let child = LazyTestNode("child")
+        let probe = LazyProviderProbe(
+            roots: [initiallySelected, branch],
+            childrenByID: [branch.id: [child]]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialSelection: [initiallySelected.id]
+        )
+
+        _ = try await model.loadRoots()
+        #expect(model.selection == [initiallySelected.id])
+        #expect(model.focusedID == initiallySelected.id)
+
+        model.expand(branch.id)
+        model.deselectAll()
+        #expect(model.selection.isEmpty)
+        #expect(model.focusedID == nil)
+
+        try await waitForChildren(of: branch.id, in: model)
+
+        #expect(model.selection.isEmpty)
+        #expect(model.focusedID == nil)
+    }
+
+    @Test
+    func expandAllTraversesBranchesDiscoveredAfterTheCall() async throws {
+        let root = LazyTestNode("root", mightHaveChildren: true)
+        let nested = LazyTestNode("nested", mightHaveChildren: true)
+        let leaf = LazyTestNode("leaf")
+        let probe = LazyProviderProbe(
+            roots: [root],
+            childrenByID: [
+                root.id: [nested],
+                nested.id: [leaf]
+            ]
+        )
+        let model = makeModel(probe: probe)
+
+        model.expandAll()
+
+        try await waitForRoots(in: model)
+        try await waitForChildren(of: root.id, in: model)
+        try await waitForChildren(of: nested.id, in: model)
+
+        #expect(model.expandedIDs == [root.id, nested.id])
+        #expect(model.visibleRows.map(\.id) == [root.id, nested.id, leaf.id])
+        #expect(await probe.rootCalls() == 1)
+        #expect(await probe.childCalls(for: root.id) == 1)
+        #expect(await probe.childCalls(for: nested.id) == 1)
     }
 
     @Test

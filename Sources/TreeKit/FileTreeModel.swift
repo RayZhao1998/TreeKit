@@ -110,6 +110,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     internal var lazyChildrenLoadStates: [Node.ID: FileTreeChildrenLoadState] = [:]
     internal var lazyInitialExpansionStorage: FileTreeInitialExpansion<Node.ID>?
     internal var lazyInitialSelectionStorage: Set<Node.ID>?
+    internal var lazyExpandAllRequested = false
     internal var requestLazyRootLoad: (@MainActor () -> Void)?
     internal var requestLazyChildrenLoad: (@MainActor (Node.ID) -> Void)?
 
@@ -250,6 +251,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         lazyChildrenLoadStates = [:]
         lazyInitialExpansionStorage = nil
         lazyInitialSelectionStorage = nil
+        lazyExpandAllRequested = false
         requestLazyRootLoad = nil
         requestLazyChildrenLoad = nil
         rootLoadState = .loaded
@@ -499,6 +501,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Collapses one branch while retaining nested descendants' expansion state.
     public func collapse(_ id: Node.ID) {
+        lazyExpandAllRequested = false
         let id = canonicalInteractionID(for: id)
         guard expandedIDs.remove(id) != nil else { return }
         if hasActiveSearchQuery {
@@ -523,6 +526,11 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Replaces expansion with known branch identifiers.
     public func setExpandedIDs(_ identifiers: Set<Node.ID>) {
+        lazyExpandAllRequested = false
+        applyExpandedIDs(identifiers)
+    }
+
+    private func applyExpandedIDs(_ identifiers: Set<Node.ID>) {
         let valid = Set(identifiers.compactMap { id -> Node.ID? in
             guard preparedTree.contains(id) else { return nil }
             let interactionID = canonicalInteractionID(for: id)
@@ -537,9 +545,11 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         }
     }
 
-    /// Expands every branch in one projection update.
+    /// Expands every discovered branch and continues through branches loaded by a provider.
     public func expandAll() {
-        setExpandedIDs(Set(knownNodeIDsInPreorder.filter { isKnownExpandable($0) }))
+        lazyExpandAllRequested = lazyChildrenProvider != nil
+        startLazyRootLoadingIfNeeded()
+        applyExpandedIDs(Set(knownNodeIDsInPreorder.filter { isKnownExpandable($0) }))
     }
 
     /// Collapses every branch in one projection update.
