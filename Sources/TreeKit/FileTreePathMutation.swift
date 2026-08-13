@@ -206,6 +206,7 @@ public extension FileTreeModel where Node == FileTreePath {
         let nextSelection = preservingSelection ? selection : []
         let nextFocus = focusedID
 
+        clearLazyLoadingConfiguration()
         fileTreePathMutationState = nextState
         pathFlattenEmptyDirectories = nextOptions.flattenEmptyDirectories
         replacePreparedTree(
@@ -279,6 +280,7 @@ public extension FileTreeModel where Node == FileTreePath {
             nextPreparedTree = try Self.prepare(state: nextState)
         }
 
+        clearLazyLoadingConfiguration()
         fileTreePathMutationState = nextState
         replacePreparedTree(
             nextPreparedTree,

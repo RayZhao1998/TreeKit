@@ -96,8 +96,8 @@ about 267 branch entries, and the 2,455-entry sibling-count dictionary disappear
 
 That is evidence of lower retained memory for this scenario, but not a universal per-node
 guarantee: framework page residency and allocator state still vary between launches. The larger
-scale reduction requires loading fewer nodes rather than only packing eager indexes. The
-lazy-loading roadmap is in [`LazyLoading.md`](LazyLoading.md).
+scale reduction requires loading fewer nodes rather than only packing eager indexes. The shipped
+provider-backed lifecycle and its remaining roadmap are in [`LazyLoading.md`](LazyLoading.md).
 
 ## Reproduction
 

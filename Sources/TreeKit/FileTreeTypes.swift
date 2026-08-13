@@ -121,6 +121,8 @@ public struct FileTreeRowContext<ID: Hashable> {
     public let isSelected: Bool
     public let isFocused: Bool
     public let isSearchMatch: Bool
+    /// Whether children are still unknown, currently loading, or fully available.
+    public let childrenLoadState: FileTreeChildrenLoadState
     /// Whether this row currently owns the shared inline-rename editor.
     public let isRenaming: Bool
     public let segments: [FileTreeRowSegment<ID>]
@@ -146,6 +148,7 @@ public struct FileTreeRowContext<ID: Hashable> {
         isSelected: Bool,
         isFocused: Bool,
         isSearchMatch: Bool,
+        childrenLoadState: FileTreeChildrenLoadState = .loaded,
         isRenaming: Bool = false,
         segments: [FileTreeRowSegment<ID>]
     ) {
@@ -160,6 +163,7 @@ public struct FileTreeRowContext<ID: Hashable> {
         self.isSelected = isSelected
         self.isFocused = isFocused
         self.isSearchMatch = isSearchMatch
+        self.childrenLoadState = childrenLoadState
         self.isRenaming = isRenaming
         self.segments = segments
     }
