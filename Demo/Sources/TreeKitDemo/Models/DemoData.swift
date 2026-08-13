@@ -22,6 +22,27 @@ enum DemoRenderer: String, CaseIterable, Identifiable {
   }
 }
 
+enum DemoDataSource: String, CaseIterable, Identifiable {
+  case eager
+  case lazy
+
+  var id: Self { self }
+
+  var title: String {
+    switch self {
+    case .eager: "Eager"
+    case .lazy: "Lazy"
+    }
+  }
+
+  var summary: String {
+    switch self {
+    case .eager: "All nodes prepared up front"
+    case .lazy: "Roots and children load on demand"
+    }
+  }
+}
+
 enum DemoRowStyle: String, CaseIterable, Identifiable {
   case custom
   case builtIn
@@ -117,6 +138,21 @@ enum DemoData {
 
   @MainActor
   static func makeModel() -> FileTreeModel<FileTreePath> {
+    makeModel(dataSource: .eager)
+  }
+
+  @MainActor
+  static func makeModel(dataSource: DemoDataSource) -> FileTreeModel<FileTreePath> {
+    switch dataSource {
+    case .eager:
+      makeEagerModel()
+    case .lazy:
+      makeLazyModel()
+    }
+  }
+
+  @MainActor
+  private static func makeEagerModel() -> FileTreeModel<FileTreePath> {
     do {
       return try FileTreeModel(
         paths: paths,
@@ -127,6 +163,39 @@ enum DemoData {
       fatalError("Invalid demo tree: \(error.localizedDescription)")
     }
   }
+
+  @MainActor
+  private static func makeLazyModel() -> FileTreeModel<FileTreePath> {
+    let catalog = lazyCatalog
+    let provider = FileTreeChildrenProvider<FileTreePath>(
+      roots: {
+        try await Task.sleep(for: .milliseconds(600))
+        return catalog.roots
+      },
+      mightHaveChildren: { node in
+        catalog.isExpandable(node.id)
+      },
+      children: { node in
+        try await Task.sleep(for: .milliseconds(350))
+        return catalog.children(of: node.id)
+      }
+    )
+    return FileTreeModel(
+      childrenProvider: provider,
+      initialExpansion: .collapsed,
+      initialSelection: [],
+      searchMode: .hideNonMatches,
+      searchText: \.path
+    )
+  }
+
+  private static let lazyCatalog: PreparedTree<FileTreePath> = {
+    do {
+      return try prepareFileTree(paths: paths)
+    } catch {
+      fatalError("Invalid lazy demo catalog: \(error.localizedDescription)")
+    }
+  }()
 
   private static func loadFixture() -> Fixture {
     guard let url = Bundle.module.url(

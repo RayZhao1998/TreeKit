@@ -32,6 +32,8 @@ let model = try FileTreeModel<FileTreePath>(
 ### Preparing data
 
 - ``PreparedTree``
+- ``FileTreeChildrenProvider``
+- ``FileTreeChildrenLoadState``
 - ``TreePreparationError``
 - ``FileTreePath``
 - ``FileTreePathOptions``
@@ -67,6 +69,10 @@ let model = try FileTreeModel<FileTreePath>(
 ### Navigation and interaction
 
 - <doc:NavigatingFileTrees>
+
+### Loading children on demand
+
+- <doc:LoadingChildrenOnDemand>
 
 ### Flattening paths
 

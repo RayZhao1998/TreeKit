@@ -36,6 +36,9 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             renameRevisionForTeardown = nil
             lastRevealSequence = nil
             bindToModel()
+            if window != nil {
+                model.startLazyRootLoadingIfNeeded()
+            }
         }
     }
 
@@ -154,6 +157,8 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         super.didMoveToWindow()
         if window == nil {
             cancelRenameForTeardown()
+        } else {
+            model.startLazyRootLoadingIfNeeded()
         }
     }
 
@@ -292,6 +297,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
 
     private func normalizeModelSelectionIfNeeded() {
         var normalizedSelection = model.selection
+        var isProvisionalFallback = false
 
         if case .single = configuration.selectionMode, normalizedSelection.count > 1 {
             if let focusedID = model.focusedID, normalizedSelection.contains(focusedID) {
@@ -307,10 +313,14 @@ public final class FileTreeView<Node: Identifiable>: UIView,
            let firstVisibleID = model.visibleRows.first?.id
         {
             normalizedSelection = [firstVisibleID]
+            isProvisionalFallback = true
         }
 
         if normalizedSelection != model.selection {
-            model.setSelection(normalizedSelection)
+            model.applyRendererSelectionPolicy(
+                normalizedSelection,
+                isProvisionalFallback: isProvisionalFallback
+            )
         }
     }
 
@@ -469,6 +479,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             isSelected: model.selection.contains(row.id),
             isFocused: model.focusedID == row.id,
             isSearchMatch: model.isSearchMatch(row.id),
+            childrenLoadState: model.childrenLoadState(for: row.id),
             isRenaming: model.activeRenamingID == row.id,
             segments: row.segments
         )

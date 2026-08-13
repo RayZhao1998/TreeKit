@@ -17,6 +17,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// concrete adapter without changing native rendering code.
     private var hierarchyQuery: PreparedTreeHierarchyQuery<Node>
 
+    /// The loading state for a lazy provider's root collection.
+    ///
+    /// Eager models are always `.loaded`. Lazy models begin `.unloaded` and fetch roots when a
+    /// renderer mounts or when ``loadRoots()`` is called explicitly.
+    public internal(set) var rootLoadState: FileTreeChildrenLoadState
+
     /// Stable identity-based selection. Selection may contain collapsed descendants.
     public private(set) var selection: Set<Node.ID>
 
@@ -70,6 +76,8 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     internal var expansionRevision: UInt64 = 0
     internal var searchRevision: UInt64 = 0
     internal var renameRevision: UInt64 = 0
+    internal var loadRevision: UInt64 = 0
+    internal var loadStateChangedIDs: Set<Node.ID> = []
     internal var revealRequest: FileTreeRevealRequest<Node.ID>?
     internal private(set) var renderedExpandedIDs: Set<Node.ID>
 
@@ -95,6 +103,17 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     internal let fileTreeDragDropOriginID = UUID()
     private var activeRenameCommit: ((String) -> Result<Void, FileTreeRenameError>)?
     private var activeRenameCancel: (() -> Void)?
+    internal var lazyChildrenProvider: FileTreeChildrenProvider<Node>?
+    internal var lazyRootNodes: [Node] = []
+    internal var lazyChildrenByID: [Node.ID: [Node]] = [:]
+    internal var lazyPotentiallyExpandableIDs: Set<Node.ID> = []
+    internal var lazyChildrenLoadStates: [Node.ID: FileTreeChildrenLoadState] = [:]
+    internal var lazyInitialExpansionStorage: FileTreeInitialExpansion<Node.ID>?
+    internal var lazyInitialSelectionStorage: Set<Node.ID>?
+    internal var lazyRendererFallbackSelectionStorage: Set<Node.ID>?
+    internal var lazyExpandAllRequested = false
+    internal var requestLazyRootLoad: (@MainActor () -> Void)?
+    internal var requestLazyChildrenLoad: (@MainActor (Node.ID) -> Void)?
 
     /// Creates a stable tree model from prepared data.
     public init(
@@ -109,6 +128,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         let pathOptions = (preparedTree as? PreparedTree<FileTreePath>)?.fileTreePathOptions
         self.preparedTree = preparedTree
         self.hierarchyQuery = PreparedTreeHierarchyQuery(preparedTree)
+        self.rootLoadState = .loaded
         self.selection = selection
         self.expandedIDs = expandedIDs
         self.focusedID = preparedTree.preorderIDs.first { selection.contains($0) }
@@ -149,6 +169,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         preservingExpansion: Bool = true,
         preservingSelection: Bool = true
     ) {
+        clearLazyLoadingConfiguration()
         // Keep the old identities until `replacePreparedTree` has recovered the canonical
         // segments represented by a flattened terminal. The replacement topology performs the
         // final pruning after those segments have been projected into its row boundaries.
@@ -199,7 +220,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         preparedTree = nextPreparedTree
         hierarchyQuery = PreparedTreeHierarchyQuery(nextPreparedTree)
         expandedIDs = nextExpansion.filtering {
-            nextPreparedTree.contains($0) && nextPreparedTree.isExpandable($0)
+            nextPreparedTree.contains($0) && isKnownExpandable($0)
         }
         selection = nextSelection.filtering { nextPreparedTree.contains($0) }
         focusedID = nextFocus.flatMap { nextPreparedTree.contains($0) ? $0 : nil }
@@ -212,7 +233,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             expansionSourceIDs
                 .filter(nextPreparedTree.contains)
                 .map { canonicalInteractionID(for: $0) }
-        ).filtering { nextPreparedTree.isExpandable($0) }
+        ).filtering { isKnownExpandable($0) }
         if projectedExpansion != expandedIDs {
             expandedIDs = projectedExpansion
             rebuildVisibleRows()
@@ -221,6 +242,21 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         expansionRevision &+= 1
         searchRevision &+= 1
         publishChange()
+    }
+
+    internal func clearLazyLoadingConfiguration() {
+        lazyChildrenProvider = nil
+        lazyRootNodes = []
+        lazyChildrenByID = [:]
+        lazyPotentiallyExpandableIDs = []
+        lazyChildrenLoadStates = [:]
+        lazyInitialExpansionStorage = nil
+        lazyInitialSelectionStorage = nil
+        lazyRendererFallbackSelectionStorage = nil
+        lazyExpandAllRequested = false
+        requestLazyRootLoad = nil
+        requestLazyChildrenLoad = nil
+        rootLoadState = .loaded
     }
 
     internal func pathMutationSubject() -> PassthroughSubject<
@@ -309,10 +345,38 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Replaces selection with known identifiers from the current hierarchy.
     public func setSelection(_ identifiers: Set<Node.ID>) {
+        applySelection(identifiers, cancellingPendingLazyInitialSelection: true)
+    }
+
+    internal func applyRendererSelectionPolicy(
+        _ identifiers: Set<Node.ID>,
+        isProvisionalFallback: Bool
+    ) {
+        applySelection(
+            identifiers,
+            cancellingPendingLazyInitialSelection: false,
+            rendererFallback: isProvisionalFallback
+        )
+    }
+
+    private func applySelection(
+        _ identifiers: Set<Node.ID>,
+        cancellingPendingLazyInitialSelection: Bool,
+        rendererFallback: Bool? = nil
+    ) {
+        if cancellingPendingLazyInitialSelection {
+            cancelPendingLazyInitialSelection()
+        }
         let valid = Set(identifiers.compactMap { id -> Node.ID? in
             guard preparedTree.contains(id) else { return nil }
             return interactionID(for: id)
         })
+        if let rendererFallback {
+            lazyRendererFallbackSelectionStorage = rendererFallback
+                && lazyInitialSelectionStorage?.isEmpty == false
+                ? valid
+                : nil
+        }
         guard valid != selection else { return }
 
         selection = valid
@@ -327,6 +391,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Selects one identifier, optionally preserving the existing selection.
     public func select(_ id: Node.ID, extendingSelection: Bool = false) {
         guard preparedTree.contains(id) else { return }
+        cancelPendingLazyInitialSelection()
         let id = interactionID(for: id)
         let previousSelection = selection
         let previousFocus = focusedID
@@ -344,6 +409,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Toggles one identifier in the selection.
     public func toggleSelection(of id: Node.ID) {
         guard preparedTree.contains(id) else { return }
+        cancelPendingLazyInitialSelection()
         let id = interactionID(for: id)
         if selection.remove(id) == nil {
             selection.insert(id)
@@ -355,6 +421,15 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Clears selection without changing expansion.
     public func deselectAll() {
         setSelection([])
+    }
+
+    private func cancelPendingLazyInitialSelection() {
+        lazyInitialSelectionStorage = nil
+        lazyRendererFallbackSelectionStorage = nil
+    }
+
+    private func cancelPendingLazyInitialExpansion() {
+        lazyInitialExpansionStorage = nil
     }
 
     /// Updates the focused row identity without changing selection.
@@ -452,7 +527,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Expands one branch. Expanding a hidden descendant records state without forcing ancestors open.
     public func expand(_ id: Node.ID) {
         let id = canonicalInteractionID(for: id)
-        guard preparedTree.isExpandable(id), expandedIDs.insert(id).inserted else { return }
+        guard isKnownExpandable(id) else { return }
+        cancelPendingLazyInitialExpansion()
+        guard expandedIDs.insert(id).inserted else { return }
         if hasActiveSearchQuery {
             rebuildVisibleRows()
         } else {
@@ -460,11 +537,15 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             insertVisibleDescendants(of: id)
         }
         expansionRevision &+= 1
-        publishChange()
+        if !startLazyChildrenLoadingIfNeeded(for: id) {
+            publishChange()
+        }
     }
 
     /// Collapses one branch while retaining nested descendants' expansion state.
     public func collapse(_ id: Node.ID) {
+        cancelPendingLazyInitialExpansion()
+        lazyExpandAllRequested = false
         let id = canonicalInteractionID(for: id)
         guard expandedIDs.remove(id) != nil else { return }
         if hasActiveSearchQuery {
@@ -489,21 +570,32 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Replaces expansion with known branch identifiers.
     public func setExpandedIDs(_ identifiers: Set<Node.ID>) {
+        cancelPendingLazyInitialExpansion()
+        lazyExpandAllRequested = false
+        applyExpandedIDs(identifiers)
+    }
+
+    private func applyExpandedIDs(_ identifiers: Set<Node.ID>) {
         let valid = Set(identifiers.compactMap { id -> Node.ID? in
             guard preparedTree.contains(id) else { return nil }
             let interactionID = canonicalInteractionID(for: id)
-            return preparedTree.isExpandable(interactionID) ? interactionID : nil
+            return isKnownExpandable(interactionID) ? interactionID : nil
         })
         guard valid != expandedIDs else { return }
         expandedIDs = valid
         rebuildVisibleRows()
         expansionRevision &+= 1
-        publishChange()
+        if !startLazyChildrenLoadingIfNeeded(for: valid) {
+            publishChange()
+        }
     }
 
-    /// Expands every branch in one projection update.
+    /// Expands every discovered branch and continues through branches loaded by a provider.
     public func expandAll() {
-        setExpandedIDs(Set(preparedTree.preorderIDs.filter { preparedTree.isExpandable($0) }))
+        cancelPendingLazyInitialExpansion()
+        lazyExpandAllRequested = lazyChildrenProvider != nil
+        startLazyRootLoadingIfNeeded()
+        applyExpandedIDs(Set(knownNodeIDsInPreorder.filter { isKnownExpandable($0) }))
     }
 
     /// Collapses every branch in one projection update.
@@ -567,6 +659,10 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             || visibleRow(for: id) != nil
         else { return }
 
+        if select {
+            cancelPendingLazyInitialSelection()
+        }
+
         var newlyExpandedAncestors: [Node.ID] = []
         var resolvedAncestorIDs: Set<Node.ID> = []
         for canonicalAncestorID in preparedTree.ancestorIDs(of: id) {
@@ -580,6 +676,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             newlyExpandedAncestors.append(ancestorID)
         }
         if let firstNewlyExpandedAncestor = newlyExpandedAncestors.first {
+            cancelPendingLazyInitialExpansion()
             expandedIDs.formUnion(newlyExpandedAncestors)
             if hasActiveSearchQuery {
                 rebuildVisibleRows()
@@ -666,7 +763,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Returns whether a discovered node has known children in the backing hierarchy.
     internal func isKnownExpandable(_ id: Node.ID) -> Bool {
-        hierarchyQuery.isExpandable(id)
+        hierarchyQuery.isExpandable(id) || lazyPotentiallyExpandableIDs.contains(id)
     }
 
     internal var renderedRootIDs: [Node.ID] {
@@ -679,7 +776,49 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     internal func isRenderedExpandable(_ id: Node.ID) -> Bool {
-        !renderedChildIDs(of: interactionID(for: id)).isEmpty
+        let interactionID = interactionID(for: id)
+        return !renderedChildIDs(of: interactionID).isEmpty || isKnownExpandable(interactionID)
+    }
+
+    /// Returns the current lazy-children state for a discovered node.
+    ///
+    /// Eager nodes and known leaves report `.loaded`.
+    public func childrenLoadState(for id: Node.ID) -> FileTreeChildrenLoadState {
+        lazyChildrenLoadStates[id] ?? .loaded
+    }
+
+    internal func startLazyRootLoadingIfNeeded() {
+        guard rootLoadState == .unloaded else { return }
+        rootLoadState = .loading
+        publishLoadStateChange()
+        requestLazyRootLoad?()
+    }
+
+    @discardableResult
+    internal func startLazyChildrenLoadingIfNeeded(for id: Node.ID) -> Bool {
+        startLazyChildrenLoadingIfNeeded(for: [id])
+    }
+
+    @discardableResult
+    internal func startLazyChildrenLoadingIfNeeded(for ids: Set<Node.ID>) -> Bool {
+        let orderedIDs = knownNodeIDsInPreorder.filter {
+            ids.contains($0) && lazyChildrenLoadStates[$0] == .unloaded
+        }
+        guard !orderedIDs.isEmpty else { return false }
+        for id in orderedIDs {
+            lazyChildrenLoadStates[id] = .loading
+        }
+        publishLoadStateChange(for: Set(orderedIDs))
+        for id in orderedIDs {
+            requestLazyChildrenLoad?(id)
+        }
+        return true
+    }
+
+    internal func publishLoadStateChange(for ids: Set<Node.ID> = []) {
+        loadStateChangedIDs = ids
+        loadRevision &+= 1
+        publishChange()
     }
 
     internal func isRenderedExpanded(_ id: Node.ID) -> Bool {
@@ -1166,6 +1305,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     internal func synchronizeSelection(_ identifiers: Set<Node.ID>, focusedID: Node.ID?) {
+        cancelPendingLazyInitialSelection()
         let valid = identifiers.filtering { preparedTree.contains($0) }
         let validFocus = focusedID.flatMap { preparedTree.contains($0) ? $0 : nil }
         guard valid != selection || validFocus != self.focusedID else { return }

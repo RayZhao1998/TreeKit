@@ -107,6 +107,28 @@ default ordering is folders first, then lexicographic by component name.
 Call `prepareFileTree(paths:options:)` directly when preparation and model construction happen
 at different layers.
 
+## Async children on demand
+
+For remote, generated, or very large hierarchies, provide roots and direct children asynchronously
+instead of preparing the complete tree up front:
+
+```swift
+let provider = FileTreeChildrenProvider<ProjectNode>(
+    roots: { try await repository.roots() },
+    mightHaveChildren: { $0.isDirectory },
+    children: { try await repository.children(of: $0.id) }
+)
+
+let model = FileTreeModel(childrenProvider: provider)
+```
+
+Mounting `FileTree` or `FileTreeView` loads roots. Expanding an unloaded branch fetches only its
+direct children, preserves their caller-provided order, and caches a successful result across
+collapse and re-expansion. Custom rows can render progress from `context.childrenLoadState`; use
+`model.rootLoadState` for a root-level loading placeholder. Search covers discovered nodes only.
+TreeKit does not own file-system scanning, watching, persistence, or provider cache invalidation.
+See [`Docs/LazyLoading.md`](Docs/LazyLoading.md) for the current lifecycle and staged roadmap.
+
 Directory-only chains can be projected as one row without changing canonical paths:
 
 ```swift
@@ -448,9 +470,10 @@ let model = FileTreeModel(
   one shared path transaction. Native hover checks do not build a second renderer-owned hierarchy.
 
 The package intentionally does not enumerate the filesystem, watch directories, or persist
-state. The current 1.x model renders an already known hierarchy and can update it through
-path-first mutations or complete reset. A compatible lazy-child design for much larger trees is described in
-[`Docs/LazyLoading.md`](Docs/LazyLoading.md); it is a roadmap, not a currently shipped API.
+state. Callers can provide an already known hierarchy and update it through path-first mutations
+or complete reset, or discover roots and direct children on demand with
+`FileTreeChildrenProvider`. See [`Docs/LazyLoading.md`](Docs/LazyLoading.md) for the shipped
+provider lifecycle and the remaining concurrency, failure, reveal, and performance roadmap.
 
 ## Design references
 

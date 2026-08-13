@@ -22,6 +22,23 @@ struct CustomFileTreeRow: View {
 
       Spacer(minLength: 8)
 
+      if node.kind == .directory {
+        switch context.childrenLoadState {
+        case .unloaded:
+          Image(systemName: "arrow.down.circle")
+            .font(.system(size: 10))
+            .foregroundStyle(.secondary)
+            .help("Children load when this folder expands")
+        case .loading:
+          ProgressView()
+            .controlSize(.mini)
+            .frame(width: 12, height: 12)
+            .help("Loading children")
+        case .loaded:
+          EmptyView()
+        }
+      }
+
       if context.isSearchMatch {
         Image(systemName: "magnifyingglass.circle.fill")
           .font(.system(size: 10))

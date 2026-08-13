@@ -22,6 +22,9 @@ public final class FileTreeView<Node: Identifiable>: NSView {
             coordinator.invalidateModel()
             coordinator.synchronize(forceRowReload: true)
             bindToModel()
+            if window != nil {
+                model.startLazyRootLoadingIfNeeded()
+            }
         }
     }
 
@@ -99,6 +102,8 @@ public final class FileTreeView<Node: Identifiable>: NSView {
         super.viewDidMoveToWindow()
         if window == nil {
             cancelRenameForTeardown()
+        } else {
+            model.startLazyRootLoadingIfNeeded()
         }
     }
 
@@ -207,6 +212,7 @@ public final class FileTreeView<Node: Identifiable>: NSView {
     @discardableResult
     private func normalizeModelSelectionIfNeeded() -> Bool {
         var normalizedSelection = model.selection
+        var isProvisionalFallback = false
 
         if configuration.selectionMode == .single, normalizedSelection.count > 1 {
             if let focusedID = model.focusedID, normalizedSelection.contains(focusedID) {
@@ -221,10 +227,14 @@ public final class FileTreeView<Node: Identifiable>: NSView {
            normalizedSelection.isEmpty,
            let firstVisibleID = model.visibleRows.first?.id {
             normalizedSelection = [firstVisibleID]
+            isProvisionalFallback = true
         }
 
         guard normalizedSelection != model.selection else { return false }
-        model.setSelection(normalizedSelection)
+        model.applyRendererSelectionPolicy(
+            normalizedSelection,
+            isProvisionalFallback: isProvisionalFallback
+        )
         return true
     }
 }
@@ -282,6 +292,7 @@ private extension FileTreeView {
         private var pendingDragSession: FileTreeDragSession?
         private var pendingDragRevision: UInt64?
         private var appliedRenameRevision: UInt64?
+        private var appliedLoadRevision: UInt64?
         private var requestedExpandedIDs: Set<Node.ID> = []
         private var appliedExpandedIDs: Set<Node.ID> = []
         private var knownNativeExpandedIDs: Set<Node.ID> = []
@@ -304,6 +315,7 @@ private extension FileTreeView {
             appliedExpansionRevision = nil
             appliedSearchRevision = nil
             appliedRenameRevision = nil
+            appliedLoadRevision = nil
             requestedExpandedIDs = []
             appliedExpandedIDs = []
             knownNativeExpandedIDs = []
@@ -395,6 +407,7 @@ private extension FileTreeView {
                 .union(selectionChangedIDs)
                 .union(focusChangedIDs)
                 .union(renameChangedIDs)
+                .union(loadStateChangedIDs())
             if forceRowReload || dataChanged || searchChanged {
                 reloadMountedRows()
             } else if !rowIDsToReload.isEmpty {
@@ -402,6 +415,12 @@ private extension FileTreeView {
             }
 
             applyRevealRequest(to: outlineView)
+        }
+
+        private func loadStateChangedIDs() -> Set<Node.ID> {
+            guard let owner, appliedLoadRevision != owner.model.loadRevision else { return [] }
+            appliedLoadRevision = owner.model.loadRevision
+            return owner.model.loadStateChangedIDs
         }
 
         func reloadMountedRows() {
@@ -493,6 +512,24 @@ private extension FileTreeView {
         func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
             guard let owner, let box = item as? ItemBox else { return false }
             return owner.model.isRenderedExpandable(box.id)
+        }
+
+        func outlineView(_ outlineView: NSOutlineView, shouldExpandItem item: Any) -> Bool {
+            guard
+                !isApplyingModelState,
+                let owner,
+                let box = item as? ItemBox,
+                owner.model.childrenLoadState(for: box.id) == .unloaded
+            else { return true }
+
+            // A provider-backed item can advertise disclosure before it has any child objects.
+            // Record expansion intent and start loading now, but reject this native transaction
+            // while the data source still reports zero children. Publishing the successful child
+            // batch reloads the data source, then `applyExpansion` opens from model state.
+            Task { @MainActor [weak owner] in
+                owner?.model.expand(box.id)
+            }
+            return false
         }
 
         func outlineView(
@@ -840,6 +877,7 @@ private extension FileTreeView {
                 isSelected: owner.model.selection.contains(id),
                 isFocused: owner.model.focusedID == id,
                 isSearchMatch: owner.model.isSearchMatch(id),
+                childrenLoadState: owner.model.childrenLoadState(for: id),
                 isRenaming: owner.model.activeRenamingID == id,
                 segments: projectedRow?.segments ?? [
                     FileTreeRowSegment(

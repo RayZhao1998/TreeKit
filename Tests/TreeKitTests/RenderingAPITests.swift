@@ -116,6 +116,42 @@ struct RenderingAPITests {
     }
 
     @Test
+    func appKitPendingInitialSelectionReplacesNonemptyFallback() async throws {
+        let root = try FileTreePath(path: "Root/")
+        let initiallySelectedChild = try FileTreePath(path: "Root/Initial.swift")
+        let provider = FileTreeChildrenProvider<FileTreePath>(
+            roots: { [root] },
+            mightHaveChildren: { $0.kind == .directory },
+            children: { node in
+                node.id == root.id ? [initiallySelectedChild] : []
+            }
+        )
+        let model = FileTreeModel(
+            childrenProvider: provider,
+            initialSelection: [initiallySelectedChild.id]
+        )
+        let configuration = FileTreeConfiguration(
+            selectionMode: .single,
+            allowsEmptySelection: false
+        )
+        let view = FileTreeView(model: model, configuration: configuration)
+
+        _ = try await model.loadRoots()
+        #expect(model.selection == [root.id])
+        #expect(model.focusedID == root.id)
+
+        model.expand(root.id)
+        for _ in 0..<256 where model.childrenLoadState(for: root.id) != .loaded {
+            await Task.yield()
+        }
+
+        #expect(model.childrenLoadState(for: root.id) == .loaded)
+        #expect(model.selection == [initiallySelectedChild.id])
+        #expect(model.focusedID == initiallySelectedChild.id)
+        _ = view
+    }
+
+    @Test
     func appKitRendersTheSharedSearchProjection() throws {
         let model = try FileTreeModel<FileTreePath>(
             paths: [

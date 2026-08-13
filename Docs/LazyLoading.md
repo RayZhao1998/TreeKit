@@ -5,8 +5,9 @@ TreeKit 1.x 有意采用 eager（一次性完整加载）的 `PreparedTree`。�
 依赖存储或远程节点的仓库可能增长到数十万个条目；在这种规模下，预先保留所有节点和路径
 就不再是合适的权衡。
 
-本文档定义了添加懒加载子节点时的兼容性边界。它描述的是设计目标，并不表示下文中的类型
-已经存在。
+TreeKit 现在已经提供第一阶段的 provider-backed hierarchy：roots 和直接 children 可以按需
+异步加载，三种 renderer 共享同一个 model 状态，成功结果在 model 生命周期内保留。竞态合并、
+reset generation、失败呈现、异步 reveal 和大规模性能门槛仍按本文后半部分的路线逐步补齐。
 
 ## 保留 eager 路径
 
@@ -25,34 +26,49 @@ arena 或缓存布局泄漏到 UI 接口中。
 Provider 需要提供三项相互独立的能力：
 
 ```swift
-public struct FileTreeChildrenProvider<Node: Identifiable & Sendable>: Sendable {
+public struct FileTreeChildrenProvider<Node: Identifiable> {
     public var roots: @Sendable () async throws -> [Node]
     public var mightHaveChildren: @Sendable (Node) -> Bool
     public var children: @Sendable (Node) async throws -> [Node]
 }
+
+extension FileTreeChildrenProvider: Sendable
+where Node: Sendable, Node.ID: Sendable {}
 ```
 
 必须提供 `mightHaveChildren`，因为在子节点尚未加载时，界面就需要确定是否显示 disclosure。
 这些闭包可以枚举文件系统、查询远程服务或读取内存中的测试数据；TreeKit 不应拥有这些策略。
 
-每个可展开节点都需要明确的状态：
+当前发布的每个可展开节点都有以下状态：
 
 ```text
-unloaded -> loading(generation) -> loaded
-                    |                 |
-                    +----> failed <---+
+unloaded -> loading -> loaded
 ```
 
-- 同一节点的并发展开请求共享同一个 task。
 - 默认情况下，折叠节点不会丢弃已经成功加载的结果，避免反复展开和折叠造成抖动。
-- `reset` 会取消尚未完成的 task，并递增 generation。即使某个 task 无法立即取消，来自旧
-  generation 的结果也会被忽略。
-- 失败状态与对应节点保持关联，并且可以显式重试。
 - 加载完成的子节点必须先验证其 ID 是否稳定且全局唯一，然后才能通过一次原子 model transaction
   发布。
 
-加载和失败状态应放入 `FileTreeRowContext`，使自定义 row 能显示进度或提供重试操作，而不需要
-虚构假的 `Node`。原生 disclosure、选择状态和辅助功能仍由 renderer 负责。
+`FileTreeRowContext.childrenLoadState` 让自定义 row 显示进度，而不需要虚构假的 `Node`。
+`FileTreeModel.rootLoadState` 覆盖 roots 尚无真实 row 的阶段。原生 disclosure、选择状态和辅助功能
+仍由 renderer 负责。
+
+```swift
+let provider = FileTreeChildrenProvider<ProjectNode>(
+    roots: { try await repository.loadRoots() },
+    mightHaveChildren: { $0.kind == .directory },
+    children: { try await repository.loadChildren(of: $0.id) }
+)
+
+let model = FileTreeModel(childrenProvider: provider)
+```
+
+renderer 挂载时会自动请求 roots，也可以在挂载前显式调用 `try await model.loadRoots()`。
+展开 `.unloaded` 的目录会自动请求直接 children；成功后 collapse/re-expand 命中缓存。搜索只覆盖
+已经发现的节点，外部文件系统扫描、watch、缓存失效与持久化仍由调用方负责。
+
+下一阶段会补充同节点 task 合并、collapse/reset 取消、generation 拒绝旧结果；随后再加入
+`.failed`、错误呈现和 retry。这些行为在对应阶段完成前不应被调用方假设。
 
 ## Reveal 与缓存
 
@@ -82,7 +98,7 @@ Demo 已经遵循第 3 项：Git 状态存放在 `FileTreePath` 之外。TreeKit
 
 ## 验收条件
 
-只有当测试覆盖以下场景时，懒加载实现才算准备就绪：取消、过期结果、重试、重复 ID、隐藏节点展开、
+完整路线只有在测试覆盖以下场景时才算准备就绪：取消、过期结果、重试、重复 ID、隐藏节点展开、
 通过未加载祖先执行 reveal、加载期间 reset、选择状态保留、确定性排序和缓存策略。性能验证应当对比
 2,500、100,000 以及至少 500,000 个潜在节点下的 eager 和 lazy 模式，并报告已加载节点数量、
 physical footprint、峰值 footprint、主线程耗时和可见内容更新延迟。
