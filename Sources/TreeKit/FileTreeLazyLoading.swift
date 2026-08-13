@@ -107,11 +107,12 @@ public extension FileTreeModel where Node: Sendable, Node.ID: Sendable {
             rootLoadState = .loaded
 
             let initial = initialLazyState(in: staged, adding: roots)
+            let initialSelection = selectionApplyingLazyInitialState(initial)
             replacePreparedTree(
                 staged,
                 expandedIDs: expandedIDs.union(initial.expandedIDs),
-                selection: selection.union(initial.selectedIDs),
-                focusedID: focusedID ?? initial.focusedID
+                selection: initialSelection.selection,
+                focusedID: initialSelection.focusedID
             )
             startInitiallyExpandedLazyLoads()
             return roots
@@ -162,11 +163,12 @@ public extension FileTreeModel where Node: Sendable, Node.ID: Sendable {
             lazyChildrenLoadStates = states
 
             let initial = initialLazyState(in: staged, adding: children)
+            let initialSelection = selectionApplyingLazyInitialState(initial)
             replacePreparedTree(
                 staged,
                 expandedIDs: expandedIDs.union(initial.expandedIDs),
-                selection: selection.union(initial.selectedIDs),
-                focusedID: focusedID ?? initial.focusedID
+                selection: initialSelection.selection,
+                focusedID: initialSelection.focusedID
             )
             startInitiallyExpandedLazyLoads()
             return children
@@ -273,6 +275,30 @@ extension FileTreeModel {
             expandedIDs: expandedIDs,
             selectedIDs: selectedIDs,
             focusedID: tree.preorderIDs.first(where: selectedIDs.contains)
+        )
+    }
+
+    private func selectionApplyingLazyInitialState(
+        _ initial: LazyInitialState
+    ) -> (selection: Set<Node.ID>, focusedID: Node.ID?) {
+        guard
+            !initial.selectedIDs.isEmpty,
+            let fallbackSelection = lazyRendererFallbackSelectionStorage
+        else {
+            return (
+                selection.union(initial.selectedIDs),
+                focusedID ?? initial.focusedID
+            )
+        }
+
+        lazyRendererFallbackSelectionStorage = nil
+        let retainedSelection = selection.subtracting(fallbackSelection)
+        let retainedFocus = focusedID.flatMap { focusedID in
+            fallbackSelection.contains(focusedID) ? nil : focusedID
+        }
+        return (
+            retainedSelection.union(initial.selectedIDs),
+            retainedFocus ?? initial.focusedID
         )
     }
 

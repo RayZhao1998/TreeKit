@@ -288,6 +288,78 @@ struct FileTreeLazyLoadingTests {
     }
 
     @Test
+    func collapseAllCancelsPendingInitialExpandedPolicy() async throws {
+        let root = LazyTestNode("root", mightHaveChildren: true)
+        let child = LazyTestNode("child")
+        let probe = LazyProviderProbe(
+            roots: [root],
+            childrenByID: [root.id: [child]]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialExpansion: .expanded
+        )
+
+        model.startLazyRootLoadingIfNeeded()
+        model.collapseAll()
+        try await waitForRoots(in: model)
+
+        #expect(model.expandedIDs.isEmpty)
+        #expect(model.visibleRows.map(\.id) == [root.id])
+        #expect(await probe.childCalls(for: root.id) == 0)
+    }
+
+    @Test
+    func setExpandedIDsCancelsPendingInitialDepthPolicy() async throws {
+        let root = LazyTestNode("root", mightHaveChildren: true)
+        let child = LazyTestNode("child")
+        let probe = LazyProviderProbe(
+            roots: [root],
+            childrenByID: [root.id: [child]]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialExpansion: .depth(2)
+        )
+
+        model.startLazyRootLoadingIfNeeded()
+        model.setExpandedIDs([])
+        try await waitForRoots(in: model)
+
+        #expect(model.expandedIDs.isEmpty)
+        #expect(model.visibleRows.map(\.id) == [root.id])
+        #expect(await probe.childCalls(for: root.id) == 0)
+    }
+
+    @Test
+    func collapseCancelsInitialExpansionForChildrenAlreadyLoading() async throws {
+        let root = LazyTestNode("root", mightHaveChildren: true)
+        let nested = LazyTestNode("nested", mightHaveChildren: true)
+        let leaf = LazyTestNode("leaf")
+        let probe = LazyProviderProbe(
+            roots: [root],
+            childrenByID: [
+                root.id: [nested],
+                nested.id: [leaf]
+            ]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialExpansion: .expanded
+        )
+
+        _ = try await model.loadRoots()
+        #expect(model.childrenLoadState(for: root.id) == .loading)
+        model.collapse(root.id)
+        try await waitForChildren(of: root.id, in: model)
+
+        #expect(model.expandedIDs.isEmpty)
+        #expect(model.visibleRows.map(\.id) == [root.id])
+        #expect(model.childrenLoadState(for: nested.id) == .unloaded)
+        #expect(await probe.childCalls(for: nested.id) == 0)
+    }
+
+    @Test
     func duplicateDiscoveredIdentityDoesNotPublishPartialChildren() async throws {
         let root = LazyTestNode("root", mightHaveChildren: true)
         let probe = LazyProviderProbe(
@@ -454,7 +526,7 @@ struct FileTreeLazyLoadingTests {
     }
 
     @Test
-    func rendererSelectionPolicyDoesNotCancelPendingInitialSelection() async throws {
+    func pendingInitialSelectionReplacesRendererFallback() async throws {
         let branch = LazyTestNode("branch", mightHaveChildren: true)
         let fallback = LazyTestNode("fallback")
         let initiallySelectedChild = LazyTestNode("initial-child")
@@ -468,12 +540,15 @@ struct FileTreeLazyLoadingTests {
         )
 
         _ = try await model.loadRoots()
-        model.applyRendererSelectionPolicy([fallback.id])
+        model.applyRendererSelectionPolicy(
+            [fallback.id],
+            isProvisionalFallback: true
+        )
         model.expand(branch.id)
         try await waitForChildren(of: branch.id, in: model)
 
-        #expect(model.selection == [fallback.id, initiallySelectedChild.id])
-        #expect(model.focusedID == fallback.id)
+        #expect(model.selection == [initiallySelectedChild.id])
+        #expect(model.focusedID == initiallySelectedChild.id)
     }
 
     @Test

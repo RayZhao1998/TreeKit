@@ -470,9 +470,10 @@ let model = FileTreeModel(
   one shared path transaction. Native hover checks do not build a second renderer-owned hierarchy.
 
 The package intentionally does not enumerate the filesystem, watch directories, or persist
-state. The current 1.x model renders an already known hierarchy and can update it through
-path-first mutations or complete reset. A compatible lazy-child design for much larger trees is described in
-[`Docs/LazyLoading.md`](Docs/LazyLoading.md); it is a roadmap, not a currently shipped API.
+state. Callers can provide an already known hierarchy and update it through path-first mutations
+or complete reset, or discover roots and direct children on demand with
+`FileTreeChildrenProvider`. See [`Docs/LazyLoading.md`](Docs/LazyLoading.md) for the shipped
+provider lifecycle and the remaining concurrency, failure, reveal, and performance roadmap.
 
 ## Design references
 

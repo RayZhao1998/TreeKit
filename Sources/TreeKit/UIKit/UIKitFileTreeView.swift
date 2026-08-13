@@ -297,6 +297,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
 
     private func normalizeModelSelectionIfNeeded() {
         var normalizedSelection = model.selection
+        var isProvisionalFallback = false
 
         if case .single = configuration.selectionMode, normalizedSelection.count > 1 {
             if let focusedID = model.focusedID, normalizedSelection.contains(focusedID) {
@@ -312,10 +313,14 @@ public final class FileTreeView<Node: Identifiable>: UIView,
            let firstVisibleID = model.visibleRows.first?.id
         {
             normalizedSelection = [firstVisibleID]
+            isProvisionalFallback = true
         }
 
         if normalizedSelection != model.selection {
-            model.applyRendererSelectionPolicy(normalizedSelection)
+            model.applyRendererSelectionPolicy(
+                normalizedSelection,
+                isProvisionalFallback: isProvisionalFallback
+            )
         }
     }
 
