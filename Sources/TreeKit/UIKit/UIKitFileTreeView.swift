@@ -315,7 +315,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         }
 
         if normalizedSelection != model.selection {
-            model.setSelection(normalizedSelection)
+            model.applyRendererSelectionPolicy(normalizedSelection)
         }
     }
 

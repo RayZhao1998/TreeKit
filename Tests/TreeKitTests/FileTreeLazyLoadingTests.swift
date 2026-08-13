@@ -362,6 +362,121 @@ struct FileTreeLazyLoadingTests {
     }
 
     @Test
+    func pendingInitialSelectionDoesNotOverrideAnExplicitClear() async throws {
+        let root = LazyTestNode("root", mightHaveChildren: true)
+        let initiallySelectedChild = LazyTestNode("initial-child")
+        let probe = LazyProviderProbe(
+            roots: [root],
+            childrenByID: [root.id: [initiallySelectedChild]]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialSelection: [initiallySelectedChild.id]
+        )
+
+        _ = try await model.loadRoots()
+        #expect(model.selection.isEmpty)
+
+        model.deselectAll()
+        model.expand(root.id)
+        try await waitForChildren(of: root.id, in: model)
+
+        #expect(model.selection.isEmpty)
+        #expect(model.focusedID == nil)
+    }
+
+    @Test
+    func pendingInitialSelectionDoesNotOverrideAReplacementSelection() async throws {
+        let branch = LazyTestNode("branch", mightHaveChildren: true)
+        let replacement = LazyTestNode("replacement")
+        let initiallySelectedChild = LazyTestNode("initial-child")
+        let probe = LazyProviderProbe(
+            roots: [branch, replacement],
+            childrenByID: [branch.id: [initiallySelectedChild]]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialSelection: [initiallySelectedChild.id]
+        )
+
+        _ = try await model.loadRoots()
+        model.setSelection([replacement.id])
+        model.expand(branch.id)
+        try await waitForChildren(of: branch.id, in: model)
+
+        #expect(model.selection == [replacement.id])
+        #expect(model.focusedID == replacement.id)
+    }
+
+    @Test
+    func pendingInitialSelectionDoesNotOverrideNativeSelectionSynchronization() async throws {
+        let root = LazyTestNode("root", mightHaveChildren: true)
+        let initiallySelectedChild = LazyTestNode("initial-child")
+        let probe = LazyProviderProbe(
+            roots: [root],
+            childrenByID: [root.id: [initiallySelectedChild]]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialSelection: [initiallySelectedChild.id]
+        )
+
+        _ = try await model.loadRoots()
+        model.synchronizeSelection([], focusedID: nil)
+        model.expand(root.id)
+        try await waitForChildren(of: root.id, in: model)
+
+        #expect(model.selection.isEmpty)
+        #expect(model.focusedID == nil)
+    }
+
+    @Test
+    func revealSelectionCancelsPendingInitialSelection() async throws {
+        let branch = LazyTestNode("branch", mightHaveChildren: true)
+        let revealed = LazyTestNode("revealed")
+        let initiallySelectedChild = LazyTestNode("initial-child")
+        let probe = LazyProviderProbe(
+            roots: [branch, revealed],
+            childrenByID: [branch.id: [initiallySelectedChild]]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialSelection: [initiallySelectedChild.id]
+        )
+
+        _ = try await model.loadRoots()
+        model.reveal(revealed.id)
+        model.expand(branch.id)
+        try await waitForChildren(of: branch.id, in: model)
+
+        #expect(model.selection == [revealed.id])
+        #expect(model.focusedID == revealed.id)
+    }
+
+    @Test
+    func rendererSelectionPolicyDoesNotCancelPendingInitialSelection() async throws {
+        let branch = LazyTestNode("branch", mightHaveChildren: true)
+        let fallback = LazyTestNode("fallback")
+        let initiallySelectedChild = LazyTestNode("initial-child")
+        let probe = LazyProviderProbe(
+            roots: [branch, fallback],
+            childrenByID: [branch.id: [initiallySelectedChild]]
+        )
+        let model = makeModel(
+            probe: probe,
+            initialSelection: [initiallySelectedChild.id]
+        )
+
+        _ = try await model.loadRoots()
+        model.applyRendererSelectionPolicy([fallback.id])
+        model.expand(branch.id)
+        try await waitForChildren(of: branch.id, in: model)
+
+        #expect(model.selection == [fallback.id, initiallySelectedChild.id])
+        #expect(model.focusedID == fallback.id)
+    }
+
+    @Test
     func expandAllTraversesBranchesDiscoveredAfterTheCall() async throws {
         let root = LazyTestNode("root", mightHaveChildren: true)
         let nested = LazyTestNode("nested", mightHaveChildren: true)

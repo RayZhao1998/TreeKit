@@ -343,6 +343,20 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     /// Replaces selection with known identifiers from the current hierarchy.
     public func setSelection(_ identifiers: Set<Node.ID>) {
+        applySelection(identifiers, cancellingPendingLazyInitialSelection: true)
+    }
+
+    internal func applyRendererSelectionPolicy(_ identifiers: Set<Node.ID>) {
+        applySelection(identifiers, cancellingPendingLazyInitialSelection: false)
+    }
+
+    private func applySelection(
+        _ identifiers: Set<Node.ID>,
+        cancellingPendingLazyInitialSelection: Bool
+    ) {
+        if cancellingPendingLazyInitialSelection {
+            cancelPendingLazyInitialSelection()
+        }
         let valid = Set(identifiers.compactMap { id -> Node.ID? in
             guard preparedTree.contains(id) else { return nil }
             return interactionID(for: id)
@@ -361,6 +375,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Selects one identifier, optionally preserving the existing selection.
     public func select(_ id: Node.ID, extendingSelection: Bool = false) {
         guard preparedTree.contains(id) else { return }
+        cancelPendingLazyInitialSelection()
         let id = interactionID(for: id)
         let previousSelection = selection
         let previousFocus = focusedID
@@ -378,6 +393,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Toggles one identifier in the selection.
     public func toggleSelection(of id: Node.ID) {
         guard preparedTree.contains(id) else { return }
+        cancelPendingLazyInitialSelection()
         let id = interactionID(for: id)
         if selection.remove(id) == nil {
             selection.insert(id)
@@ -389,6 +405,10 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// Clears selection without changing expansion.
     public func deselectAll() {
         setSelection([])
+    }
+
+    private func cancelPendingLazyInitialSelection() {
+        lazyInitialSelectionStorage = nil
     }
 
     /// Updates the focused row identity without changing selection.
@@ -612,6 +632,10 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             || searchMode == .expandMatches
             || visibleRow(for: id) != nil
         else { return }
+
+        if select {
+            cancelPendingLazyInitialSelection()
+        }
 
         var newlyExpandedAncestors: [Node.ID] = []
         var resolvedAncestorIDs: Set<Node.ID> = []
@@ -1254,6 +1278,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     }
 
     internal func synchronizeSelection(_ identifiers: Set<Node.ID>, focusedID: Node.ID?) {
+        cancelPendingLazyInitialSelection()
         let valid = identifiers.filtering { preparedTree.contains($0) }
         let validFocus = focusedID.flatMap { preparedTree.contains($0) ? $0 : nil }
         guard valid != selection || validFocus != self.focusedID else { return }

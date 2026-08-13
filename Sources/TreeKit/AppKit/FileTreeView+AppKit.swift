@@ -229,7 +229,7 @@ public final class FileTreeView<Node: Identifiable>: NSView {
         }
 
         guard normalizedSelection != model.selection else { return false }
-        model.setSelection(normalizedSelection)
+        model.applyRendererSelectionPolicy(normalizedSelection)
         return true
     }
 }
