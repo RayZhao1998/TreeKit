@@ -296,7 +296,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         if case .single = configuration.selectionMode, normalizedSelection.count > 1 {
             if let focusedID = model.focusedID, normalizedSelection.contains(focusedID) {
                 normalizedSelection = [focusedID]
-            } else if let firstSelectedID = model.preparedTree.preorderIDs
+            } else if let firstSelectedID = model.knownNodeIDsInPreorder
                 .first(where: normalizedSelection.contains) {
                 normalizedSelection = [firstSelectedID]
             }
@@ -678,7 +678,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         guard let indexPath = proposedIndexPath,
               let row = visibleRow(at: indexPath.item),
               let id = row.id as? String,
-              let path = model.preparedTree.node(for: id)
+              let path = model.knownNode(for: id)
         else {
             return .init(path: nil, position: .inside)
         }
@@ -823,7 +823,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         let point = gestureRecognizer.location(in: collectionView)
         guard let indexPath = collectionView.indexPathForItem(at: point),
               let row = visibleRow(at: indexPath.item),
-              model.preparedTree.isExpandable(row.id)
+              model.isKnownExpandable(row.id)
         else { return }
         model.toggleExpansion(of: row.id)
     }
