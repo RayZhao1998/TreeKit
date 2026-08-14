@@ -11,11 +11,15 @@ public struct FileTreeDefaultRow: View {
     public let segments: [FileTreeRowSegment<String>]
     public let isExpanded: Bool
     public let icons: FileTreeIcons
+    public let childrenLoadState: FileTreeChildrenLoadState
+    private let onRetry: (() -> Void)?
 
     public init(
         node: FileTreePath,
         isExpanded: Bool = false,
-        icons: FileTreeIcons = .complete
+        icons: FileTreeIcons = .complete,
+        childrenLoadState: FileTreeChildrenLoadState = .loaded,
+        onRetry: (() -> Void)? = nil
     ) {
         self.node = node
         self.segments = [
@@ -23,18 +27,24 @@ public struct FileTreeDefaultRow: View {
         ]
         self.isExpanded = isExpanded
         self.icons = icons
+        self.childrenLoadState = childrenLoadState
+        self.onRetry = onRetry
     }
 
     public init(
         node: FileTreePath,
         segments: [FileTreeRowSegment<String>],
         isExpanded: Bool = false,
-        icons: FileTreeIcons = .complete
+        icons: FileTreeIcons = .complete,
+        childrenLoadState: FileTreeChildrenLoadState = .loaded,
+        onRetry: (() -> Void)? = nil
     ) {
         self.node = node
         self.segments = segments
         self.isExpanded = isExpanded
         self.icons = icons
+        self.childrenLoadState = childrenLoadState
+        self.onRetry = onRetry
     }
 
     public var body: some View {
@@ -45,6 +55,23 @@ public struct FileTreeDefaultRow: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             Spacer(minLength: 0)
+            switch childrenLoadState {
+            case .loading:
+                ProgressView()
+                    .controlSize(.mini)
+                    .accessibilityLabel("Loading children")
+            case .failed(let failure):
+                if let onRetry {
+                    Button(action: onRetry) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Retry loading children")
+                    .accessibilityHint(failure.message)
+                }
+            case .unloaded, .loaded:
+                EmptyView()
+            }
         }
         .contentShape(Rectangle())
     }
@@ -187,7 +214,11 @@ public extension FileTree where Node == FileTreePath, RowContent == FileTreeDefa
                 node: node,
                 segments: context.segments,
                 isExpanded: context.isExpanded,
-                icons: configuration.icons
+                icons: configuration.icons,
+                childrenLoadState: context.childrenLoadState,
+                onRetry: {
+                    model.retryLazyChildrenLoadingIfFailed(for: context.id)
+                }
             )
         }
     }

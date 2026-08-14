@@ -126,8 +126,12 @@ Mounting `FileTree` or `FileTreeView` loads roots. Expanding an unloaded branch 
 direct children, preserves their caller-provided order, coalesces concurrent requests for the same
 branch, and caches a successful result across collapse and re-expansion. Resetting the model or
 replacing its provider cancels known work and prevents obsolete results from changing the current
-generation. Custom rows can render progress from `context.childrenLoadState`; use
-`model.rootLoadState` for a root-level loading placeholder. Search covers discovered nodes only.
+generation. Failures remain on the real root or branch as `.failed(FileTreeLoadFailure)`; retry
+with `try await model.retryRoots()` or `try await model.retryChildren(of: id)`. Repeated retry
+actions coalesce, and the default SwiftUI, AppKit, and UIKit presentations provide accessible
+progress and retry controls. Custom rows can render the same state from
+`context.childrenLoadState`; use `model.rootLoadState` before real root rows exist. Search covers
+discovered nodes only.
 TreeKit does not own file-system scanning, watching, persistence, or provider cache invalidation.
 See [`Docs/LazyLoading.md`](Docs/LazyLoading.md) for the current lifecycle and staged roadmap.
 
@@ -475,7 +479,7 @@ The package intentionally does not enumerate the filesystem, watch directories, 
 state. Callers can provide an already known hierarchy and update it through path-first mutations
 or complete reset, or discover roots and direct children on demand with
 `FileTreeChildrenProvider`. See [`Docs/LazyLoading.md`](Docs/LazyLoading.md) for the shipped
-provider lifecycle and the remaining concurrency, failure, reveal, and performance roadmap.
+provider lifecycle and the remaining reveal, validation, and performance roadmap.
 
 ## Design references
 

@@ -253,7 +253,7 @@ struct DemoControlPanel: View {
   }
 
   private var lazyRaceControls: some View {
-    GroupBox("Lazy loading races") {
+    GroupBox("Lazy loading, failure, and retry") {
       VStack(alignment: .leading, spacing: 9) {
         HStack(spacing: 7) {
           Button("Expand ×3", action: startCoalescedExpansion)
@@ -278,6 +278,19 @@ struct DemoControlPanel: View {
           )
           .disabled(!lazyRaceController.hasPendingLoad)
           .help("Release the Demo provider even if its operation was cancelled")
+        }
+
+        HStack(spacing: 7) {
+          Button("Fail roots", action: installRootFailureScenario)
+            .help("Replace the provider and retain one deterministic root failure")
+          Button("Retry roots", action: retryRoots)
+            .disabled(model.rootLoadState.failure == nil)
+          Button("Fail branch", action: installBranchFailureScenario)
+            .help("Load roots, then fail the real .claude row once")
+          Button("Retry branch", action: retryBranch)
+            .disabled(
+              model.childrenLoadState(for: lazyRaceController.targetID).failure == nil
+            )
         }
 
         VStack(alignment: .leading, spacing: 3) {
@@ -359,6 +372,61 @@ struct DemoControlPanel: View {
     )
     Task { @MainActor in
       try? await model.loadRoots()
+    }
+  }
+
+  private func installRootFailureScenario() {
+    model.reset(
+      childrenProvider: lazyRaceController.makeRootFailureProvider(),
+      initialExpansion: .collapsed,
+      initialSelection: []
+    )
+    Task { @MainActor in
+      do {
+        _ = try await model.loadRoots()
+      } catch {
+        eventObserver.record("Lazy root failure · \(error.localizedDescription)")
+      }
+    }
+  }
+
+  private func retryRoots() {
+    Task { @MainActor in
+      do {
+        _ = try await model.retryRoots()
+        eventObserver.record("Lazy roots retry succeeded")
+      } catch {
+        eventObserver.record("Lazy roots retry failed · \(error.localizedDescription)")
+      }
+    }
+  }
+
+  private func installBranchFailureScenario() {
+    model.reset(
+      childrenProvider: lazyRaceController.makeChildFailureProvider(),
+      initialExpansion: .collapsed,
+      initialSelection: []
+    )
+    Task { @MainActor in
+      do {
+        _ = try await model.loadRoots()
+        let targetID = lazyRaceController.targetID
+        model.expand(targetID)
+        _ = try await model.loadChildren(of: targetID)
+      } catch {
+        eventObserver.record("Lazy branch failure · \(error.localizedDescription)")
+      }
+    }
+  }
+
+  private func retryBranch() {
+    Task { @MainActor in
+      do {
+        _ = try await model.retryChildren(of: lazyRaceController.targetID)
+        eventObserver.record("Lazy branch retry succeeded")
+      } catch {
+        eventObserver.record("Lazy branch retry failed · \(error.localizedDescription)")
+      }
     }
   }
 
@@ -623,6 +691,7 @@ private extension FileTreeChildrenLoadState {
     switch self {
     case .unloaded: "unloaded"
     case .loading: "loading"
+    case .failed: "failed"
     case .loaded: "loaded"
     }
   }

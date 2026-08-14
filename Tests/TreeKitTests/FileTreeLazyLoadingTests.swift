@@ -373,7 +373,14 @@ struct FileTreeLazyLoadingTests {
         await #expect(throws: TreePreparationError.duplicateIdentifier("child")) {
             try await model.loadChildren(of: root.id)
         }
-        #expect(model.childrenLoadState(for: root.id) == .unloaded)
+        guard case .failed(let failure) = model.childrenLoadState(for: root.id) else {
+            Issue.record("Expected validation failure state on the real branch")
+            return
+        }
+        #expect(
+            failure.underlyingError as? TreePreparationError
+                == .duplicateIdentifier("child")
+        )
         #expect(model.preparedTree.nodes.map(\.id) == [root.id])
         #expect(model.visibleRows.map(\.id) == [root.id])
     }

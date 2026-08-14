@@ -269,7 +269,10 @@ struct ContentView: View {
             node: node,
             context: context,
             gitStatus: DemoData.gitStatuses[node.id],
-            icons: configuration.icons
+            icons: configuration.icons,
+            onRetry: {
+              Task { try? await model.retryChildren(of: context.id) }
+            }
           )
         }
       }
@@ -381,9 +384,12 @@ private struct TreeStatusBar: View {
 
   var body: some View {
     HStack(spacing: 7) {
-      if dataSource == .lazy, model.rootLoadState != .loaded {
+      if dataSource == .lazy, case .loading = model.rootLoadState {
         ProgressView()
           .controlSize(.mini)
+      } else if dataSource == .lazy, case .failed = model.rootLoadState {
+        Image(systemName: "exclamationmark.triangle.fill")
+          .foregroundStyle(.orange)
       } else {
         Circle()
           .fill(.green)

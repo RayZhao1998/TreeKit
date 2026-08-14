@@ -6,6 +6,7 @@ struct CustomFileTreeRow: View {
   let context: FileTreeRowContext<String>
   let gitStatus: DemoGitStatus?
   let icons: FileTreeIcons
+  let onRetry: () -> Void
 
   var body: some View {
     HStack(spacing: 7) {
@@ -34,6 +35,14 @@ struct CustomFileTreeRow: View {
             .controlSize(.mini)
             .frame(width: 12, height: 12)
             .help("Loading children")
+        case .failed(let failure):
+          Button(action: onRetry) {
+            Image(systemName: "arrow.clockwise")
+          }
+          .buttonStyle(.borderless)
+          .help("Retry loading children: \(failure.message)")
+          .accessibilityLabel("Retry loading children")
+          .accessibilityHint(failure.message)
         case .loaded:
           EmptyView()
         }

@@ -36,6 +36,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             renameRevisionForTeardown = nil
             lastRevealSequence = nil
             bindToModel()
+            updateRootLoadPresentation()
             if window != nil {
                 model.startLazyRootLoadingIfNeeded()
             }
@@ -63,6 +64,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
 
     private let flowLayout: UICollectionViewFlowLayout
     private let collectionView: UICollectionView
+    private let rootStatusView = UIKitLazyRootStatusView()
     private var revisionCancellable: AnyCancellable?
 
     private var observedModelIdentifier: ObjectIdentifier?
@@ -116,12 +118,18 @@ public final class FileTreeView<Node: Identifiable>: UIView,
             forCellWithReuseIdentifier: UIKitFileTreeCell.reuseIdentifier
         )
 
+        rootStatusView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(collectionView)
+        addSubview(rootStatusView)
         NSLayoutConstraint.activate([
             collectionView.leadingAnchor.constraint(equalTo: leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: trailingAnchor),
             collectionView.topAnchor.constraint(equalTo: topAnchor),
             collectionView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            rootStatusView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            rootStatusView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            rootStatusView.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 16),
+            rootStatusView.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -16),
         ])
 
         let backgroundTap = UITapGestureRecognizer(target: self, action: #selector(clearSelectionFromBackground(_:)))
@@ -138,6 +146,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
 
         applyConfiguration()
         bindToModel()
+        updateRootLoadPresentation()
     }
 
     deinit {
@@ -266,6 +275,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         }
 
         normalizeModelSelectionIfNeeded()
+        updateRootLoadPresentation()
 
         let shouldRestoreTreeFocus = observedRenamingID != nil && model.activeRenamingID == nil
         observedRenamingID = model.activeRenamingID
@@ -292,6 +302,12 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         if shouldRestoreTreeFocus {
             collectionView.becomeFirstResponder()
             setNeedsFocusUpdate()
+        }
+    }
+
+    private func updateRootLoadPresentation() {
+        rootStatusView.update(state: model.rootLoadState) { [weak self] in
+            self?.model.retryLazyRootLoadingIfFailed()
         }
     }
 
@@ -428,7 +444,7 @@ public final class FileTreeView<Node: Identifiable>: UIView,
         cell.configure(
             context: context,
             configuration: configuration,
-            contentProvider: { [rowProvider, configuration] reusableView in
+            contentProvider: { [weak self, rowProvider, configuration] reusableView in
                 let content = rowProvider(row.node, context, reusableView)
                 if let path = row.node as? FileTreePath,
                    let defaultRow = content as? UIKitDefaultFileTreeRowView {
@@ -436,13 +452,23 @@ public final class FileTreeView<Node: Identifiable>: UIView,
                         with: path,
                         segments: context.segments,
                         isExpanded: context.isExpanded,
-                        icons: configuration.icons
+                        icons: configuration.icons,
+                        childrenLoadState: context.childrenLoadState,
+                        onRetry: { [weak self] in
+                            self?.model.retryLazyChildrenLoadingIfFailed(for: context.id)
+                        }
                     )
                 }
                 return content
             },
             onToggleExpansion: { [weak self] in
-                self?.model.toggleExpansion(of: nodeID)
+                guard let self else { return }
+                if case .failed = context.childrenLoadState {
+                    self.model.expand(nodeID)
+                    self.model.retryLazyChildrenLoadingIfFailed(for: nodeID)
+                } else {
+                    self.model.toggleExpansion(of: nodeID)
+                }
             }
         )
         cell.configureRename(
@@ -836,7 +862,12 @@ public final class FileTreeView<Node: Identifiable>: UIView,
               let row = visibleRow(at: indexPath.item),
               model.isKnownExpandable(row.id)
         else { return }
-        model.toggleExpansion(of: row.id)
+        if case .failed = model.childrenLoadState(for: row.id) {
+            model.expand(row.id)
+            model.retryLazyChildrenLoadingIfFailed(for: row.id)
+        } else {
+            model.toggleExpansion(of: row.id)
+        }
     }
 
     private func treeCell(containing view: UIView?) -> UIKitFileTreeCell? {
@@ -861,6 +892,69 @@ public extension FileTreeView where Node == FileTreePath {
             (reusableView as? UIKitDefaultFileTreeRowView)
                 ?? UIKitDefaultFileTreeRowView()
         }
+    }
+}
+
+@MainActor
+private final class UIKitLazyRootStatusView: UIStackView {
+    private let progressView = UIActivityIndicatorView(style: .medium)
+    private let messageLabel = UILabel()
+    private let retryButton = UIButton(type: .system)
+    private var onRetry: (() -> Void)?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        axis = .horizontal
+        alignment = .center
+        spacing = 8
+
+        messageLabel.font = .preferredFont(forTextStyle: .body)
+        messageLabel.adjustsFontForContentSizeCategory = true
+        messageLabel.textColor = .secondaryLabel
+        messageLabel.lineBreakMode = .byTruncatingMiddle
+        retryButton.setTitle("Retry", for: .normal)
+        retryButton.addTarget(self, action: #selector(retry), for: .primaryActionTriggered)
+
+        addArrangedSubview(progressView)
+        addArrangedSubview(messageLabel)
+        addArrangedSubview(retryButton)
+        isHidden = true
+    }
+
+    @available(*, unavailable)
+    required init(coder: NSCoder) {
+        fatalError("UIKitLazyRootStatusView does not support initialization from a coder")
+    }
+
+    func update(state: FileTreeChildrenLoadState, onRetry: @escaping () -> Void) {
+        self.onRetry = onRetry
+        switch state {
+        case .loading:
+            isHidden = false
+            progressView.isHidden = false
+            progressView.startAnimating()
+            messageLabel.text = "Loading tree…"
+            retryButton.isHidden = true
+            accessibilityLabel = "Loading file tree"
+            accessibilityHint = nil
+        case .failed(let failure):
+            isHidden = false
+            progressView.stopAnimating()
+            progressView.isHidden = true
+            messageLabel.text = failure.message
+            retryButton.isHidden = false
+            retryButton.accessibilityLabel = "Retry loading file tree"
+            retryButton.accessibilityHint = failure.message
+            accessibilityLabel = "File tree failed to load"
+            accessibilityHint = failure.message
+        case .unloaded, .loaded:
+            isHidden = true
+            progressView.stopAnimating()
+        }
+    }
+
+    @objc private func retry() {
+        onRetry?()
     }
 }
 
@@ -1025,11 +1119,18 @@ private final class UIKitFileTreeCell: UICollectionViewCell {
 
         disclosureButton.isHidden = !context.isExpandable
         disclosureButton.isEnabled = context.isExpandable
-        disclosureButton.setImage(
-            UIImage(systemName: context.isExpanded ? "chevron.down" : "chevron.right"),
-            for: .normal
-        )
-        disclosureButton.accessibilityLabel = context.isExpanded ? "Collapse" : "Expand"
+        if case .failed(let failure) = context.childrenLoadState {
+            disclosureButton.setImage(UIImage(systemName: "arrow.clockwise"), for: .normal)
+            disclosureButton.accessibilityLabel = "Retry loading children"
+            disclosureButton.accessibilityHint = failure.message
+        } else {
+            disclosureButton.setImage(
+                UIImage(systemName: context.isExpanded ? "chevron.down" : "chevron.right"),
+                for: .normal
+            )
+            disclosureButton.accessibilityLabel = context.isExpanded ? "Collapse" : "Expand"
+            disclosureButton.accessibilityHint = nil
+        }
 
         let nextContentView = contentProvider(renderedContentView)
         if nextContentView !== renderedContentView {
@@ -1138,6 +1239,10 @@ private final class UIKitRenameTextField: UITextField {
 private final class UIKitDefaultFileTreeRowView: UIView {
     private let iconView = UIImageView()
     private let nameLabel = UILabel()
+    private let progressView = UIActivityIndicatorView(style: .medium)
+    private let retryButton = UIButton(type: .system)
+    private let statusStack = UIStackView()
+    private var onRetry: (() -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -1152,16 +1257,35 @@ private final class UIKitDefaultFileTreeRowView: UIView {
         nameLabel.adjustsFontForContentSizeCategory = true
         nameLabel.lineBreakMode = .byTruncatingMiddle
 
+        progressView.hidesWhenStopped = true
+        progressView.isHidden = true
+        retryButton.setImage(UIImage(systemName: "arrow.clockwise"), for: .normal)
+        retryButton.addTarget(self, action: #selector(retry), for: .primaryActionTriggered)
+        retryButton.isHidden = true
+
+        statusStack.translatesAutoresizingMaskIntoConstraints = false
+        statusStack.axis = .horizontal
+        statusStack.alignment = .center
+        statusStack.spacing = 4
+        statusStack.addArrangedSubview(progressView)
+        statusStack.addArrangedSubview(retryButton)
+
         addSubview(iconView)
         addSubview(nameLabel)
+        addSubview(statusStack)
         NSLayoutConstraint.activate([
             iconView.leadingAnchor.constraint(equalTo: leadingAnchor),
             iconView.centerYAnchor.constraint(equalTo: centerYAnchor),
             iconView.widthAnchor.constraint(equalToConstant: 16),
             iconView.heightAnchor.constraint(equalToConstant: 16),
             nameLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 5),
-            nameLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
+            nameLabel.trailingAnchor.constraint(
+                lessThanOrEqualTo: statusStack.leadingAnchor,
+                constant: -4
+            ),
             nameLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            statusStack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            statusStack.centerYAnchor.constraint(equalTo: centerYAnchor),
         ])
     }
 
@@ -1174,14 +1298,37 @@ private final class UIKitDefaultFileTreeRowView: UIView {
         with node: FileTreePath,
         segments: [FileTreeRowSegment<ID>],
         isExpanded: Bool,
-        icons: FileTreeIcons
+        icons: FileTreeIcons,
+        childrenLoadState: FileTreeChildrenLoadState,
+        onRetry: @escaping () -> Void
     ) {
+        self.onRetry = onRetry
         nameLabel.text = segments.map(\.label).joined(separator: " / ")
         let resolved = icons.resolve(node, isExpanded: isExpanded)
         iconView.image = resolved.uiKitImage()
         iconView.tintColor = resolved.isTemplate ? .secondaryLabel : nil
         accessibilityLabel = segments.map(\.label).joined(separator: " / ")
         accessibilityValue = node.kind == .directory ? "Folder" : "File"
+
+        progressView.stopAnimating()
+        progressView.isHidden = true
+        retryButton.isHidden = true
+        switch childrenLoadState {
+        case .loading:
+            progressView.isHidden = false
+            progressView.startAnimating()
+            progressView.accessibilityLabel = "Loading children"
+        case .failed(let failure):
+            retryButton.isHidden = false
+            retryButton.accessibilityLabel = "Retry loading children"
+            retryButton.accessibilityHint = failure.message
+        case .unloaded, .loaded:
+            break
+        }
+    }
+
+    @objc private func retry() {
+        onRetry?()
     }
 }
 #endif

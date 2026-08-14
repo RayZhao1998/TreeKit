@@ -7,8 +7,8 @@ TreeKit 1.x 有意采用 eager（一次性完整加载）的 `PreparedTree`。�
 
 TreeKit 现在已经提供第一阶段的 provider-backed hierarchy：roots 和直接 children 可以按需
 异步加载，三种 renderer 共享同一个 model 状态，成功结果在 model 生命周期内保留。同分支竞态
-会被合并，provider reset 使用 generation 隔离旧结果；持久失败呈现、异步 reveal 和大规模性能
-门槛仍按本文后半部分的路线逐步补齐。
+会被合并，provider reset 使用 generation 隔离旧结果；失败状态与 retry 也已贯穿 model 和三种
+renderer。异步 reveal 和大规模性能门槛仍按本文后半部分的路线逐步补齐。
 
 ## 保留 eager 路径
 
@@ -44,6 +44,7 @@ where Node: Sendable, Node.ID: Sendable {}
 
 ```text
 unloaded -> loading -> loaded
+                    -> failed -> loading (retry)
 ```
 
 - 加载期间折叠只撤销展开意图，不取消 provider operation；成功结果仍会缓存，节点保持折叠，
@@ -54,6 +55,11 @@ unloaded -> loading -> loaded
 `FileTreeRowContext.childrenLoadState` 让自定义 row 显示进度，而不需要虚构假的 `Node`。
 `FileTreeModel.rootLoadState` 覆盖 roots 尚无真实 row 的阶段。原生 disclosure、选择状态和辅助功能
 仍由 renderer 负责。
+
+失败时 `.failed(FileTreeLoadFailure)` 会保留 provider 的具体 `underlyingError` 和默认本地化消息。
+调用方可以在自定义 row 中转换具体错误并决定文案；默认 SwiftUI、AppKit、UIKit 呈现则提供一致的
+进度、错误与可访问 retry 控件。`retryRoots()` 与 `retryChildren(of:)` 复用相同的 operation registry，
+因此重复点击只产生一次 provider 请求；成功 retry 通过一个完整 transaction 清除错误并发布节点。
 
 ```swift
 let provider = FileTreeChildrenProvider<ProjectNode>(
@@ -81,9 +87,9 @@ operation，再清空旧 hierarchy、安装新 provider。即使旧 provider 不
 model 在 provider reset 后需要显式调用 `loadRoots()`，因为新 roots 有意保持 `.unloaded`。
 
 内部自动加载任务不会强持有 model。一个无关分支完成时，transaction 以当时最新的 selection、focus、
-嵌套 expansion 和已加载 sibling 为基础合并结果，而不是恢复 operation 启动时的旧快照。下一阶段仍会
-加入 `.failed`、错误呈现和 retry；当前 generation 的失败会共享给调用者并退回 `.unloaded`，旧
-generation 的失败则被忽略。
+嵌套 expansion 和已加载 sibling 为基础合并结果，而不是恢复 operation 启动时的旧快照。当前
+generation 的失败会共享给所有 waiter 并保留在真实 branch/root surface 上；只有显式 retry 才会
+重新请求，旧 generation 的失败仍会被忽略。
 
 ## Reveal 与缓存
 
@@ -113,8 +119,8 @@ Demo 已经遵循第 3 项：Git 状态存放在 `FileTreePath` 之外。TreeKit
 
 ## 验收条件
 
-当前竞态层测试已经覆盖同节点合并、加载期间 collapse、reset 前后的取消、过期成功与失败、状态保留，
-以及 model 释放。完整路线仍需要覆盖 retry、重复 ID、隐藏节点展开、通过未加载祖先执行 reveal、
-确定性排序和缓存策略。性能验证应当对比 2,500、100,000 以及至少 500,000 个潜在节点下的 eager
+当前测试已经覆盖同节点合并、加载期间 collapse、reset 前后的取消、过期成功与失败、状态保留、
+model 释放、root/child 失败、重复 retry 和 retry 后 reset。完整路线仍需要覆盖通过未加载祖先执行
+reveal、确定性排序和缓存策略。性能验证应当对比 2,500、100,000 以及至少 500,000 个潜在节点下的 eager
 和 lazy 模式，并报告已加载节点数量、physical footprint、峰值 footprint、主线程耗时和可见内容
 更新延迟。
