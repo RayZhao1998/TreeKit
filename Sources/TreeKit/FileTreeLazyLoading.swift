@@ -150,10 +150,10 @@ public extension FileTreeModel where Node: Sendable, Node.ID: Sendable {
         if lazyChildrenLoadStates[id] == .loaded {
             return lazyChildrenByID[id] ?? []
         }
-        if lazyChildOperationsByID[id] == nil {
-            _ = beginLazyChildOperations(for: [id])
+        if let operation = lazyChildOperationsByID[id] {
+            return try await value(from: operation)
         }
-        guard let operation = lazyChildOperationsByID[id] else {
+        guard let operation = beginLazyChildOperations(for: [id])[id] else {
             return lazyChildrenByID[id] ?? []
         }
         return try await value(from: operation)
@@ -190,7 +190,7 @@ extension FileTreeModel {
             _ = self?.beginLazyRootOperation()
         }
         requestLazyChildrenLoad = { [weak self] ids in
-            self?.beginLazyChildOperations(for: ids) ?? false
+            !(self?.beginLazyChildOperations(for: ids).isEmpty ?? true)
         }
     }
 
@@ -244,17 +244,21 @@ extension FileTreeModel {
     }
 
     @discardableResult
-    private func beginLazyChildOperations(for ids: Set<Node.ID>) -> Bool
+    private func beginLazyChildOperations(
+        for ids: Set<Node.ID>
+    ) -> [Node.ID: FileTreeLazyLoadOperation<Node>]
     where Node: Sendable, Node.ID: Sendable {
-        guard let provider = lazyChildrenProvider else { return false }
+        guard let provider = lazyChildrenProvider else { return [:] }
         let orderedIDs = knownNodeIDsInPreorder.filter {
             ids.contains($0)
                 && lazyChildrenLoadStates[$0] == .unloaded
                 && lazyChildOperationsByID[$0] == nil
         }
-        guard !orderedIDs.isEmpty else { return false }
+        guard !orderedIDs.isEmpty else { return [:] }
 
         let generation = lazyLoadGeneration
+        var startedOperations: [Node.ID: FileTreeLazyLoadOperation<Node>] = [:]
+        startedOperations.reserveCapacity(orderedIDs.count)
         for id in orderedIDs {
             guard let node = knownNode(for: id) else { continue }
             lazyLoadSequence &+= 1
@@ -288,15 +292,17 @@ extension FileTreeModel {
                     )
                 }
             }
-            lazyChildOperationsByID[id] = FileTreeLazyLoadOperation(
+            let operation = FileTreeLazyLoadOperation(
                 generation: generation,
                 token: token,
                 task: task
             )
+            lazyChildOperationsByID[id] = operation
+            startedOperations[id] = operation
             lazyChildrenLoadStates[id] = .loading
         }
         publishLoadStateChange(for: Set(orderedIDs))
-        return true
+        return startedOperations
     }
 
     private func value(

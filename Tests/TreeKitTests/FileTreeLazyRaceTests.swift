@@ -572,6 +572,36 @@ struct FileTreeLazyRaceTests {
     }
 
     @Test
+    func synchronousResetDuringChildLoadPublicationObsoletesTheChildWaiter() async throws {
+        let root = LazyRaceNode("root", mightHaveChildren: true)
+        let replacement = LazyRaceNode("replacement")
+        let probe = LazyRaceProbe(immediateRoots: [root])
+        let model = makeModel(probe: probe)
+        _ = try await model.loadRoots()
+        let replacementTree = try PreparedTree(roots: [replacement]) { _ in [] }
+        var didReset = false
+        let subscription = model.$revision.sink { _ in
+            guard
+                !didReset,
+                model.childrenLoadState(for: root.id) == .loading
+            else { return }
+            didReset = true
+            model.reset(replacementTree)
+        }
+
+        await #expect(throws: CancellationError.self) {
+            try await model.loadChildren(of: root.id)
+        }
+
+        #expect(didReset)
+        #expect(model.preparedTree.nodes.map(\.id) == [replacement.id])
+        #expect(model.visibleRows.map(\.id) == [replacement.id])
+        #expect(model.rootLoadState == .loaded)
+        #expect(await probe.childCalls(for: root.id) == 0)
+        _ = subscription
+    }
+
+    @Test
     func replacingTheProviderStartsANewGenerationAndIgnoresTheOldRoots() async throws {
         let staleRoot = LazyRaceNode("stale-root")
         let currentRoot = LazyRaceNode("current-root")
