@@ -201,12 +201,18 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         )
     }
 
+    @discardableResult
     internal func replacePreparedTree(
         _ nextPreparedTree: PreparedTree<Node>,
         expandedIDs nextExpansion: Set<Node.ID>,
         selection nextSelection: Set<Node.ID>,
-        focusedID nextFocus: Node.ID?
-    ) {
+        focusedID nextFocus: Node.ID?,
+        expectedLazyGeneration: UInt64? = nil
+    ) -> Bool {
+        let transactionIsCurrent = { [self] in
+            expectedLazyGeneration.map { lazyLoadGeneration == $0 } ?? true
+        }
+        guard transactionIsCurrent() else { return false }
         clearRenameSession(publishing: false)
         let expansionSourceIDs: Set<Node.ID>
         if pathFlattenEmptyDirectories {
@@ -230,7 +236,11 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         selection = nextSelection.filtering { nextPreparedTree.contains($0) }
         focusedID = nextFocus.flatMap { nextPreparedTree.contains($0) ? $0 : nil }
         normalizedSearchTextByID = nil
-        refreshSearchMatches(selectingFallbackFocus: true)
+        guard refreshSearchMatches(
+            selectingFallbackFocus: true,
+            while: transactionIsCurrent
+        ) else { return false }
+        guard transactionIsCurrent() else { return false }
         rebuildVisibleRows()
         selection = Set(selection.map { interactionID(for: $0) })
         focusedID = focusedID.map { interactionID(for: $0) }
@@ -243,10 +253,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             expandedIDs = projectedExpansion
             rebuildVisibleRows()
         }
+        guard transactionIsCurrent() else { return false }
         dataRevision &+= 1
         expansionRevision &+= 1
         searchRevision &+= 1
         publishChange()
+        return true
     }
 
     internal func clearLazyLoadingConfiguration() {
@@ -1139,11 +1151,16 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         publishChange()
     }
 
-    private func refreshSearchMatches(selectingFallbackFocus: Bool) {
+    @discardableResult
+    private func refreshSearchMatches(
+        selectingFallbackFocus: Bool,
+        while transactionIsCurrent: () -> Bool = { true }
+    ) -> Bool {
+        guard transactionIsCurrent() else { return false }
         guard hasActiveSearchQuery else {
             matchingIDs = []
             matchingIDSet = []
-            return
+            return true
         }
 
         let searchTextByID: [Node.ID: String]
@@ -1154,12 +1171,16 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
             generated.reserveCapacity(preparedTree.count)
             for id in preparedTree.preorderIDs {
                 guard let node = preparedTree.nodesByID[id] else { continue }
-                generated[id] = Self.normalizeSearchQuery(searchText(node))
+                let text = Self.normalizeSearchQuery(searchText(node))
+                guard transactionIsCurrent() else { return false }
+                generated[id] = text
             }
+            guard transactionIsCurrent() else { return false }
             normalizedSearchTextByID = generated
             searchTextByID = generated
         }
 
+        guard transactionIsCurrent() else { return false }
         matchingIDs = preparedTree.preorderIDs.filter { id in
             searchTextByID[id]?.contains(searchQuery) == true
         }
@@ -1170,6 +1191,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
            focusedID.map(matchingIDSet.contains) != true {
             focusedID = matchingIDs[0]
         }
+        return transactionIsCurrent()
     }
 
     private func normalizeSearchInteractionIfNeeded(

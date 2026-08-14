@@ -409,13 +409,13 @@ extension FileTreeModel {
 
                 let initial = initialLazyState(in: staged, adding: roots)
                 let initialSelection = selectionApplyingLazyInitialState(initial)
-                replacePreparedTree(
+                guard replacePreparedTree(
                     staged,
                     expandedIDs: expandedIDs.union(initial.expandedIDs),
                     selection: initialSelection.selection,
-                    focusedID: initialSelection.focusedID
-                )
-                guard lazyLoadGeneration == generation else { return .obsolete }
+                    focusedID: initialSelection.focusedID,
+                    expectedLazyGeneration: generation
+                ) else { return .obsolete }
                 startInitiallyExpandedLazyLoads()
                 guard lazyLoadGeneration == generation else { return .obsolete }
                 return .success(roots)
@@ -481,13 +481,13 @@ extension FileTreeModel {
 
                 let initial = initialLazyState(in: staged, adding: children)
                 let initialSelection = selectionApplyingLazyInitialState(initial)
-                replacePreparedTree(
+                guard replacePreparedTree(
                     staged,
                     expandedIDs: expandedIDs.union(initial.expandedIDs),
                     selection: initialSelection.selection,
-                    focusedID: initialSelection.focusedID
-                )
-                guard lazyLoadGeneration == generation else { return .obsolete }
+                    focusedID: initialSelection.focusedID,
+                    expectedLazyGeneration: generation
+                ) else { return .obsolete }
                 startInitiallyExpandedLazyLoads()
                 guard lazyLoadGeneration == generation else { return .obsolete }
                 return .success(children)

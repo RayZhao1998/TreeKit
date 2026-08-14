@@ -5,10 +5,16 @@ import Testing
 private struct LazyRaceNode: Identifiable, Equatable, Sendable {
     let id: String
     let mightHaveChildren: Bool
+    let searchValue: String
 
-    init(_ id: String, mightHaveChildren: Bool = false) {
+    init(
+        _ id: String,
+        mightHaveChildren: Bool = false,
+        searchValue: String? = nil
+    ) {
         self.id = id
         self.mightHaveChildren = mightHaveChildren
+        self.searchValue = searchValue ?? id
     }
 }
 
@@ -197,6 +203,42 @@ private final class LazyRaceResetTrigger: @unchecked Sendable {
             model.reset(childrenProvider: replacementProvider)
         }
         return node.mightHaveChildren
+    }
+}
+
+@MainActor
+private final class LazyRaceSearchResetTrigger {
+    private weak var model: FileTreeModel<LazyRaceNode>?
+    private var replacementTree: PreparedTree<LazyRaceNode>?
+    private let triggerValue: String
+    private(set) var didReset = false
+
+    init(triggerValue: String) {
+        self.triggerValue = triggerValue
+    }
+
+    func install(
+        model: FileTreeModel<LazyRaceNode>,
+        replacementTree: PreparedTree<LazyRaceNode>
+    ) {
+        self.model = model
+        self.replacementTree = replacementTree
+    }
+
+    func searchText(for node: LazyRaceNode) -> String {
+        if node.searchValue == triggerValue,
+           !didReset,
+           let model,
+           let replacementTree
+        {
+            didReset = true
+            model.reset(
+                replacementTree,
+                preservingExpansion: false,
+                preservingSelection: false
+            )
+        }
+        return node.searchValue
     }
 }
 
@@ -882,5 +924,80 @@ struct FileTreeLazyRaceTests {
 
         #expect(weakModel == nil)
         #expect(await gate.rootCalls() == 1)
+    }
+
+    @Test
+    func resetDuringRootSearchTextRejectsTheStaleSnapshotTransaction() async throws {
+        let oldRoot = LazyRaceNode(
+            "shared-root",
+            mightHaveChildren: true,
+            searchValue: "old-root"
+        )
+        let replacementRoot = LazyRaceNode(
+            "shared-root",
+            searchValue: "replacement-root"
+        )
+        let replacementChild = LazyRaceNode("replacement-child")
+        let replacementTree = try PreparedTree(roots: [replacementRoot]) { node in
+            node.id == replacementRoot.id ? [replacementChild] : []
+        }
+        let probe = LazyRaceProbe(immediateRoots: [oldRoot])
+        let trigger = LazyRaceSearchResetTrigger(triggerValue: oldRoot.searchValue)
+        let model = FileTreeModel(
+            childrenProvider: makeProvider(probe: probe),
+            initialExpansion: .expanded,
+            searchText: { trigger.searchText(for: $0) }
+        )
+        trigger.install(model: model, replacementTree: replacementTree)
+        model.openSearch(initialQuery: "replacement-root")
+
+        await #expect(throws: CancellationError.self) {
+            try await model.loadRoots()
+        }
+
+        #expect(trigger.didReset)
+        #expect(model.preparedTree.nodes.map(\.searchValue) == [
+            replacementRoot.searchValue,
+            replacementChild.searchValue,
+        ])
+        #expect(model.matchingIDs == [replacementRoot.id])
+        #expect(model.expandedIDs.isEmpty)
+    }
+
+    @Test
+    func resetDuringChildSearchTextRejectsTheStaleSnapshotTransaction() async throws {
+        let root = LazyRaceNode("root", mightHaveChildren: true)
+        let oldChild = LazyRaceNode("shared-child", searchValue: "old-child")
+        let replacementRoot = LazyRaceNode("root", searchValue: "replacement-root")
+        let replacementChild = LazyRaceNode(
+            "shared-child",
+            searchValue: "replacement-child"
+        )
+        let replacementTree = try PreparedTree(roots: [replacementRoot]) { node in
+            node.id == replacementRoot.id ? [replacementChild] : []
+        }
+        let probe = LazyRaceProbe(immediateRoots: [root])
+        await probe.succeedChildren(of: root.id, with: [oldChild])
+        let trigger = LazyRaceSearchResetTrigger(triggerValue: oldChild.searchValue)
+        let model = FileTreeModel(
+            childrenProvider: makeProvider(probe: probe),
+            searchText: { trigger.searchText(for: $0) }
+        )
+        trigger.install(model: model, replacementTree: replacementTree)
+        model.openSearch(initialQuery: "replacement-child")
+        _ = try await model.loadRoots()
+        model.expand(root.id)
+
+        await #expect(throws: CancellationError.self) {
+            try await model.loadChildren(of: root.id)
+        }
+
+        #expect(trigger.didReset)
+        #expect(model.preparedTree.nodes.map(\.searchValue) == [
+            replacementRoot.searchValue,
+            replacementChild.searchValue,
+        ])
+        #expect(model.matchingIDs == [replacementChild.id])
+        #expect(model.expandedIDs.isEmpty)
     }
 }
