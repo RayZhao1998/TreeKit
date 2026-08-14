@@ -352,6 +352,9 @@ extension FileTreeModel {
                     potentialIDs: &potentialIDs,
                     states: &states
                 )
+                guard lazyLoadGeneration == generation,
+                      lazyRootOperation?.token == token
+                else { return .obsolete }
 
                 lazyRootOperation = nil
                 lazyRootNodes = roots
@@ -422,6 +425,9 @@ extension FileTreeModel {
                     potentialIDs: &potentialIDs,
                     states: &states
                 )
+                guard lazyLoadGeneration == generation,
+                      lazyChildOperationsByID[id]?.token == token
+                else { return .obsolete }
 
                 lazyChildOperationsByID[id] = nil
                 lazyChildrenByID = nextChildrenByID

@@ -169,6 +169,38 @@ private actor LazyRaceCancellationGate {
 }
 
 @MainActor
+private final class LazyRaceResetTrigger: @unchecked Sendable {
+    private weak var model: FileTreeModel<LazyRaceNode>?
+    private var replacementProvider: FileTreeChildrenProvider<LazyRaceNode>?
+    private let triggerID: String
+    private(set) var didReset = false
+
+    init(triggerID: String) {
+        self.triggerID = triggerID
+    }
+
+    func install(
+        model: FileTreeModel<LazyRaceNode>,
+        replacementProvider: FileTreeChildrenProvider<LazyRaceNode>
+    ) {
+        self.model = model
+        self.replacementProvider = replacementProvider
+    }
+
+    func classify(_ node: LazyRaceNode) -> Bool {
+        if node.id == triggerID,
+           !didReset,
+           let model,
+           let replacementProvider
+        {
+            didReset = true
+            model.reset(childrenProvider: replacementProvider)
+        }
+        return node.mightHaveChildren
+    }
+}
+
+@MainActor
 struct FileTreeLazyRaceTests {
     private enum WaitError: Error {
         case rootProviderDidNotStart
@@ -599,6 +631,75 @@ struct FileTreeLazyRaceTests {
         #expect(model.rootLoadState == .loaded)
         #expect(await probe.childCalls(for: root.id) == 0)
         _ = subscription
+    }
+
+    @Test
+    func resetDuringRootClassificationRejectsTheStaleRoots() async throws {
+        let staleRoot = LazyRaceNode("stale-root", mightHaveChildren: true)
+        let currentRoot = LazyRaceNode("current-root")
+        let staleProbe = LazyRaceProbe(immediateRoots: [staleRoot])
+        let currentProbe = LazyRaceProbe(immediateRoots: [currentRoot])
+        let trigger = LazyRaceResetTrigger(triggerID: staleRoot.id)
+        let staleProvider = FileTreeChildrenProvider<LazyRaceNode>(
+            roots: { try await staleProbe.loadRoots() },
+            mightHaveChildren: { node in
+                MainActor.assumeIsolated { trigger.classify(node) }
+            },
+            children: { try await staleProbe.loadChildren(of: $0) }
+        )
+        let model = FileTreeModel(childrenProvider: staleProvider)
+        trigger.install(
+            model: model,
+            replacementProvider: makeProvider(probe: currentProbe)
+        )
+
+        await #expect(throws: CancellationError.self) {
+            try await model.loadRoots()
+        }
+        #expect(trigger.didReset)
+        #expect(model.rootLoadState == .unloaded)
+        #expect(model.preparedTree.count == 0)
+
+        #expect(try await model.loadRoots() == [currentRoot])
+        #expect(model.preparedTree.nodes.map(\.id) == [currentRoot.id])
+        #expect(await staleProbe.rootCalls() == 1)
+        #expect(await currentProbe.rootCalls() == 1)
+    }
+
+    @Test
+    func resetDuringChildClassificationRejectsTheStaleChildren() async throws {
+        let staleRoot = LazyRaceNode("stale-root", mightHaveChildren: true)
+        let staleChild = LazyRaceNode("stale-child", mightHaveChildren: true)
+        let currentRoot = LazyRaceNode("current-root")
+        let staleProbe = LazyRaceProbe(immediateRoots: [staleRoot])
+        let currentProbe = LazyRaceProbe(immediateRoots: [currentRoot])
+        await staleProbe.succeedChildren(of: staleRoot.id, with: [staleChild])
+        let trigger = LazyRaceResetTrigger(triggerID: staleChild.id)
+        let staleProvider = FileTreeChildrenProvider<LazyRaceNode>(
+            roots: { try await staleProbe.loadRoots() },
+            mightHaveChildren: { node in
+                MainActor.assumeIsolated { trigger.classify(node) }
+            },
+            children: { try await staleProbe.loadChildren(of: $0) }
+        )
+        let model = FileTreeModel(childrenProvider: staleProvider)
+        trigger.install(
+            model: model,
+            replacementProvider: makeProvider(probe: currentProbe)
+        )
+        _ = try await model.loadRoots()
+
+        await #expect(throws: CancellationError.self) {
+            try await model.loadChildren(of: staleRoot.id)
+        }
+        #expect(trigger.didReset)
+        #expect(model.rootLoadState == .unloaded)
+        #expect(model.preparedTree.count == 0)
+
+        #expect(try await model.loadRoots() == [currentRoot])
+        #expect(model.preparedTree.nodes.map(\.id) == [currentRoot.id])
+        #expect(await staleProbe.childCalls(for: staleRoot.id) == 1)
+        #expect(await currentProbe.rootCalls() == 1)
     }
 
     @Test
