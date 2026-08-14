@@ -49,10 +49,86 @@ internal enum FileTreeLazyLoadOutcome<Node>: @unchecked Sendable {
     case obsolete
 }
 
+internal final class FileTreeLazyLoadSignal<Node>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var outcome: FileTreeLazyLoadOutcome<Node>?
+    private var isInvalidated = false
+    private var waiters: [UUID: CheckedContinuation<FileTreeLazyLoadOutcome<Node>, any Error>] = [:]
+    private var cancelledBeforeRegistration: Set<UUID> = []
+
+    func value() async throws -> FileTreeLazyLoadOutcome<Node> {
+        let id = UUID()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                lock.lock()
+                if isInvalidated || cancelledBeforeRegistration.remove(id) != nil {
+                    lock.unlock()
+                    continuation.resume(throwing: CancellationError())
+                } else if let outcome {
+                    lock.unlock()
+                    continuation.resume(returning: outcome)
+                } else {
+                    waiters[id] = continuation
+                    lock.unlock()
+                }
+            }
+        } onCancel: {
+            cancelWaiter(id)
+        }
+    }
+
+    func resolve(_ outcome: FileTreeLazyLoadOutcome<Node>) -> FileTreeLazyLoadOutcome<Node> {
+        lock.lock()
+        guard !isInvalidated, self.outcome == nil else {
+            lock.unlock()
+            return outcome
+        }
+        self.outcome = outcome
+        let pending = Array(waiters.values)
+        waiters = [:]
+        cancelledBeforeRegistration = []
+        lock.unlock()
+        for continuation in pending {
+            continuation.resume(returning: outcome)
+        }
+        return outcome
+    }
+
+    func invalidate() {
+        lock.lock()
+        guard !isInvalidated, outcome == nil else {
+            lock.unlock()
+            return
+        }
+        isInvalidated = true
+        let pending = Array(waiters.values)
+        waiters = [:]
+        cancelledBeforeRegistration = []
+        lock.unlock()
+        for continuation in pending {
+            continuation.resume(throwing: CancellationError())
+        }
+    }
+
+    private func cancelWaiter(_ id: UUID) {
+        lock.lock()
+        if let continuation = waiters.removeValue(forKey: id) {
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
+        } else {
+            if !isInvalidated, outcome == nil {
+                cancelledBeforeRegistration.insert(id)
+            }
+            lock.unlock()
+        }
+    }
+}
+
 internal struct FileTreeLazyLoadOperation<Node>: @unchecked Sendable {
     let generation: UInt64
     let token: UInt64
     let task: Task<FileTreeLazyLoadOutcome<Node>, Never>
+    let signal: FileTreeLazyLoadSignal<Node>
 }
 
 /// Cancels renderer-started provider work when its model is released.
@@ -242,39 +318,42 @@ extension FileTreeModel {
         let generation = lazyLoadGeneration
         lazyLoadSequence &+= 1
         let token = lazyLoadSequence
+        let signal = FileTreeLazyLoadSignal<Node>()
         let task = Task { @MainActor [weak self, provider] in
             guard !Task.isCancelled else {
-                return FileTreeLazyLoadOutcome<Node>.obsolete
+                return signal.resolve(.obsolete)
             }
             do {
                 let roots = try await provider.roots()
                 guard !Task.isCancelled, let self else {
-                    return FileTreeLazyLoadOutcome<Node>.obsolete
+                    return signal.resolve(.obsolete)
                 }
-                return self.finishLazyRootLoad(
+                return signal.resolve(self.finishLazyRootLoad(
                     .success(roots),
                     provider: provider,
                     generation: generation,
                     token: token
-                )
+                ))
             } catch {
                 guard !Task.isCancelled, let self else {
-                    return FileTreeLazyLoadOutcome<Node>.obsolete
+                    return signal.resolve(.obsolete)
                 }
-                return self.finishLazyRootLoad(
+                return signal.resolve(self.finishLazyRootLoad(
                     .failure(error),
                     provider: provider,
                     generation: generation,
                     token: token
-                )
+                ))
             }
         }
         let operation = FileTreeLazyLoadOperation(
             generation: generation,
             token: token,
-            task: task
+            task: task,
+            signal: signal
         )
         lazyOperationLifetime.register(token: token) {
+            signal.invalidate()
             task.cancel()
         }
         lazyRootOperation = operation
@@ -303,41 +382,44 @@ extension FileTreeModel {
             guard let node = knownNode(for: id) else { continue }
             lazyLoadSequence &+= 1
             let token = lazyLoadSequence
+            let signal = FileTreeLazyLoadSignal<Node>()
             let task = Task { @MainActor [weak self, provider, node] in
                 guard !Task.isCancelled else {
-                    return FileTreeLazyLoadOutcome<Node>.obsolete
+                    return signal.resolve(.obsolete)
                 }
                 do {
                     let children = try await provider.children(node)
                     guard !Task.isCancelled, let self else {
-                        return FileTreeLazyLoadOutcome<Node>.obsolete
+                        return signal.resolve(.obsolete)
                     }
-                    return self.finishLazyChildLoad(
+                    return signal.resolve(self.finishLazyChildLoad(
                         .success(children),
                         of: id,
                         provider: provider,
                         generation: generation,
                         token: token
-                    )
+                    ))
                 } catch {
                     guard !Task.isCancelled, let self else {
-                        return FileTreeLazyLoadOutcome<Node>.obsolete
+                        return signal.resolve(.obsolete)
                     }
-                    return self.finishLazyChildLoad(
+                    return signal.resolve(self.finishLazyChildLoad(
                         .failure(error),
                         of: id,
                         provider: provider,
                         generation: generation,
                         token: token
-                    )
+                    ))
                 }
             }
             let operation = FileTreeLazyLoadOperation(
                 generation: generation,
                 token: token,
-                task: task
+                task: task,
+                signal: signal
             )
             lazyOperationLifetime.register(token: token) {
+                signal.invalidate()
                 task.cancel()
             }
             lazyChildOperationsByID[id] = operation
@@ -351,7 +433,7 @@ extension FileTreeModel {
     private func value(
         from operation: FileTreeLazyLoadOperation<Node>
     ) async throws -> [Node] where Node: Sendable, Node.ID: Sendable {
-        let outcome = await operation.task.value
+        let outcome = try await operation.signal.value()
         try Task.checkCancellation()
         guard lazyLoadGeneration == operation.generation else {
             throw CancellationError()

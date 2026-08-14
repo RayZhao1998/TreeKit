@@ -387,6 +387,51 @@ struct FileTreeLazyRaceTests {
     }
 
     @Test
+    func cancellingOneRootWaiterDetachesWithoutCancellingSharedWork() async throws {
+        let root = LazyRaceNode("root")
+        let probe = LazyRaceProbe()
+        let model = makeModel(probe: probe)
+        let cancelledWaiter = Task { try await model.loadRoots() }
+        let retainedWaiter = Task { try await model.loadRoots() }
+        try await waitForRootCalls(1, in: probe)
+
+        cancelledWaiter.cancel()
+        await #expect(throws: CancellationError.self) {
+            try await cancelledWaiter.value
+        }
+        #expect(await probe.rootCalls() == 1)
+
+        await probe.succeedRoots(with: [root])
+        #expect(try await retainedWaiter.value == [root])
+        #expect(model.rootLoadState == .loaded)
+    }
+
+    @Test
+    func providerResetPromptlyDetachesWaitersFromNonCooperativeWork() async throws {
+        let oldRoot = LazyRaceNode("old")
+        let replacementRoot = LazyRaceNode("replacement")
+        let oldProbe = LazyRaceProbe()
+        let replacementProbe = LazyRaceProbe(immediateRoots: [replacementRoot])
+        let model = makeModel(probe: oldProbe)
+        let oldWaiter = Task { try await model.loadRoots() }
+        try await waitForRootCalls(1, in: oldProbe)
+
+        model.reset(childrenProvider: makeProvider(probe: replacementProbe))
+        await #expect(throws: CancellationError.self) {
+            try await oldWaiter.value
+        }
+
+        #expect(try await model.loadRoots() == [replacementRoot])
+        #expect(model.preparedTree.nodes.map(\.id) == [replacementRoot.id])
+
+        // The old provider intentionally ignores task cancellation. Releasing it after the
+        // waiter has already detached must not mutate the replacement generation.
+        await oldProbe.succeedRoots(with: [oldRoot])
+        await settleScheduler()
+        #expect(model.preparedTree.nodes.map(\.id) == [replacementRoot.id])
+    }
+
+    @Test
     func concurrentChildRequestsShareOneProviderOperation() async throws {
         let root = LazyRaceNode("root", mightHaveChildren: true)
         let child = LazyRaceNode("child")
