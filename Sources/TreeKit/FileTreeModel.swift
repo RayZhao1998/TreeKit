@@ -114,6 +114,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     internal var lazyExpandAllRequested = false
     internal var lazyLoadGeneration: UInt64 = 0
     internal var lazyLoadSequence: UInt64 = 0
+    internal let lazyOperationLifetime = FileTreeLazyOperationLifetime()
     internal var lazyRootOperation: FileTreeLazyLoadOperation<Node>?
     internal var lazyChildOperationsByID: [Node.ID: FileTreeLazyLoadOperation<Node>] = [:]
     internal var requestLazyRootLoad: (@MainActor () -> Void)?
@@ -266,14 +267,9 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
 
     private func invalidateLazyLoadingOperations() {
         lazyLoadGeneration &+= 1
-        let rootTask = lazyRootOperation?.task
-        let childTasks = lazyChildOperationsByID.values.map(\.task)
         lazyRootOperation = nil
         lazyChildOperationsByID = [:]
-        rootTask?.cancel()
-        for task in childTasks {
-            task.cancel()
-        }
+        lazyOperationLifetime.cancelAll()
     }
 
     internal func pathMutationSubject() -> PassthroughSubject<

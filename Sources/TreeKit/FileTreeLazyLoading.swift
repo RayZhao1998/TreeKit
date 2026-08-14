@@ -55,6 +55,43 @@ internal struct FileTreeLazyLoadOperation<Node>: @unchecked Sendable {
     let task: Task<FileTreeLazyLoadOutcome<Node>, Never>
 }
 
+/// Cancels renderer-started provider work when its model is released.
+///
+/// `FileTreeModel` cannot inspect its generic operation dictionaries from its nonisolated
+/// deinitializer when `Node.ID` is not unconditionally `Sendable`. Keeping only type-erased,
+/// thread-safe cancellation actions here gives the owner a generic-independent lifetime hook.
+internal final class FileTreeLazyOperationLifetime: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancellations: [UInt64: @Sendable () -> Void] = [:]
+
+    func register(token: UInt64, cancellation: @escaping @Sendable () -> Void) {
+        lock.lock()
+        cancellations[token] = cancellation
+        lock.unlock()
+    }
+
+    func remove(token: UInt64) {
+        lock.lock()
+        cancellations[token] = nil
+        lock.unlock()
+    }
+
+    func cancelAll() {
+        lock.lock()
+        let pending = Array(cancellations.values)
+        cancellations = [:]
+        lock.unlock()
+
+        for cancel in pending {
+            cancel()
+        }
+    }
+
+    deinit {
+        cancelAll()
+    }
+}
+
 public extension FileTreeModel where Node: Sendable, Node.ID: Sendable {
     /// Creates a model that discovers roots and branch children from an asynchronous provider.
     ///
@@ -237,6 +274,9 @@ extension FileTreeModel {
             token: token,
             task: task
         )
+        lazyOperationLifetime.register(token: token) {
+            task.cancel()
+        }
         lazyRootOperation = operation
         rootLoadState = .loading
         publishLoadStateChange()
@@ -297,6 +337,9 @@ extension FileTreeModel {
                 token: token,
                 task: task
             )
+            lazyOperationLifetime.register(token: token) {
+                task.cancel()
+            }
             lazyChildOperationsByID[id] = operation
             startedOperations[id] = operation
             lazyChildrenLoadStates[id] = .loading
@@ -332,6 +375,7 @@ extension FileTreeModel {
         guard lazyLoadGeneration == generation,
               lazyRootOperation?.token == token
         else { return .obsolete }
+        defer { lazyOperationLifetime.remove(token: token) }
 
         switch result {
         case .failure(let error):
@@ -398,6 +442,7 @@ extension FileTreeModel {
         guard lazyLoadGeneration == generation,
               lazyChildOperationsByID[id]?.token == token
         else { return .obsolete }
+        defer { lazyOperationLifetime.remove(token: token) }
 
         switch result {
         case .failure(let error):

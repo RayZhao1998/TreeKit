@@ -859,4 +859,28 @@ struct FileTreeLazyRaceTests {
         await settleScheduler()
         #expect(weakModel == nil)
     }
+
+    @Test
+    func discardingModelCancelsRendererStartedProviderOperation() async throws {
+        let gate = LazyRaceCancellationGate()
+        let provider = FileTreeChildrenProvider<LazyRaceNode>(
+            roots: { try await gate.loadRoots() },
+            mightHaveChildren: { $0.mightHaveChildren },
+            children: { _ in [] }
+        )
+        var model: FileTreeModel<LazyRaceNode>? = FileTreeModel(
+            childrenProvider: provider,
+            searchText: \LazyRaceNode.id
+        )
+
+        model?.startLazyRootLoadingIfNeeded()
+        try await waitForRootsToStart(in: gate)
+
+        weak var weakModel = model
+        model = nil
+        try await waitForCancellation(in: gate)
+
+        #expect(weakModel == nil)
+        #expect(await gate.rootCalls() == 1)
+    }
 }
