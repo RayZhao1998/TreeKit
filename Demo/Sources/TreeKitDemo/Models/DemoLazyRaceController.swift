@@ -2,12 +2,32 @@ import Combine
 import Foundation
 import TreeKit
 
+private enum DemoLazyProviderError: LocalizedError, Sendable {
+  case rootsUnavailable
+  case branchUnavailable(String)
+
+  var errorDescription: String? {
+    switch self {
+    case .rootsUnavailable:
+      "Demo root request failed. Retry to continue."
+    case .branchUnavailable(let id):
+      "Demo branch \(id) failed. Retry the real row to continue."
+    }
+  }
+}
+
 /// A Demo-only provider harness that makes lazy-loading races visible and repeatable.
 ///
 /// The selected branch deliberately ignores task cancellation until the user releases it. This
 /// lets the Demo prove that a replaced provider generation cannot publish a late result.
 @MainActor
 final class DemoLazyRaceController: ObservableObject {
+  private enum ProviderMode: Equatable, Sendable {
+    case race
+    case failRootsOnce
+    case failTargetOnce
+  }
+
   enum RequestResult {
     case accepted
     case obsolete
@@ -32,6 +52,8 @@ final class DemoLazyRaceController: ObservableObject {
   private var acceptedRequestsByGeneration: [Int: Int] = [:]
   private var obsoleteRequestsByGeneration: [Int: Int] = [:]
   private var failedRequestsByGeneration: [Int: Int] = [:]
+  private var consumedRootFailureGenerations: Set<Int> = []
+  private var consumedTargetFailureGenerations: Set<Int> = []
 
   init(catalog: PreparedTree<FileTreePath>) {
     self.catalog = catalog
@@ -88,11 +110,19 @@ final class DemoLazyRaceController: ObservableObject {
   }
 
   func makeInitialProvider() -> FileTreeChildrenProvider<FileTreePath> {
-    advanceGeneration(outcome: "Initial lazy provider installed")
+    advanceGeneration(outcome: "Initial lazy provider installed", mode: .race)
   }
 
   func makeReplacementProvider() -> FileTreeChildrenProvider<FileTreePath> {
-    advanceGeneration(outcome: "Provider replaced; old work is now stale")
+    advanceGeneration(outcome: "Provider replaced; old work is now stale", mode: .race)
+  }
+
+  func makeRootFailureProvider() -> FileTreeChildrenProvider<FileTreePath> {
+    advanceGeneration(outcome: "Root failure scenario installed", mode: .failRootsOnce)
+  }
+
+  func makeChildFailureProvider() -> FileTreeChildrenProvider<FileTreePath> {
+    advanceGeneration(outcome: "Branch failure scenario installed", mode: .failTargetOnce)
   }
 
   func recordLoadRequests(_ count: Int, generation requestGeneration: Int) {
@@ -156,7 +186,8 @@ final class DemoLazyRaceController: ObservableObject {
   }
 
   private func advanceGeneration(
-    outcome: String
+    outcome: String,
+    mode: ProviderMode
   ) -> FileTreeChildrenProvider<FileTreePath> {
     generation &+= 1
     lastOutcome = "\(outcome) · generation \(generation)"
@@ -165,8 +196,13 @@ final class DemoLazyRaceController: ObservableObject {
     let providerGeneration = generation
     let catalog = catalog
     return FileTreeChildrenProvider(
-      roots: {
+      roots: { [weak self] in
         try await Task.sleep(for: .milliseconds(600))
+        if mode == .failRootsOnce,
+           await self?.consumeRootFailure(for: providerGeneration) == true
+        {
+          throw DemoLazyProviderError.rootsUnavailable
+        }
         return catalog.roots
       },
       mightHaveChildren: { node in
@@ -174,6 +210,15 @@ final class DemoLazyRaceController: ObservableObject {
       },
       children: { [weak self] node in
         if node.id == DemoData.lazyRaceTarget {
+          if mode == .failTargetOnce,
+             await self?.consumeTargetFailure(for: providerGeneration) == true
+          {
+            throw DemoLazyProviderError.branchUnavailable(node.id)
+          }
+          if mode != .race {
+            try await Task.sleep(for: .milliseconds(350))
+            return catalog.children(of: node.id)
+          }
           guard let stream = await self?.makeTargetLoadStream(
             generation: providerGeneration
           ) else { return [] }
@@ -190,6 +235,24 @@ final class DemoLazyRaceController: ObservableObject {
         return catalog.children(of: node.id)
       }
     )
+  }
+
+  private func consumeRootFailure(for providerGeneration: Int) -> Bool {
+    guard consumedRootFailureGenerations.insert(providerGeneration).inserted else {
+      return false
+    }
+    lastOutcome = "Root request failed for generation \(providerGeneration)"
+    publishMetrics()
+    return true
+  }
+
+  private func consumeTargetFailure(for providerGeneration: Int) -> Bool {
+    guard consumedTargetFailureGenerations.insert(providerGeneration).inserted else {
+      return false
+    }
+    lastOutcome = "Branch request failed for generation \(providerGeneration)"
+    publishMetrics()
+    return true
   }
 
   private func makeTargetLoadStream(

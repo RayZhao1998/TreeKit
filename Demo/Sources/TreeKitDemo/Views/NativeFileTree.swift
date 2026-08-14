@@ -61,7 +61,10 @@ struct NativeFileTree: NSViewRepresentable {
     row.update(
       node: node,
       context: context,
-      icons: configuration.icons
+      icons: configuration.icons,
+      onRetry: { [weak model] in
+        Task { try? await model?.retryChildren(of: context.id) }
+      }
     )
     return row
   }
@@ -78,6 +81,8 @@ private final class DemoNativeFileTreeRowView: NSView {
   private let nameField = NSTextField(labelWithString: "")
   private let unloadedView = NSImageView()
   private let progressView = NSProgressIndicator()
+  private let retryButton = NSButton(image: NSImage(), target: nil, action: nil)
+  private var onRetry: (() -> Void)?
 
   override init(frame frameRect: NSRect) {
     super.init(frame: frameRect)
@@ -106,10 +111,22 @@ private final class DemoNativeFileTreeRowView: NSView {
     progressView.controlSize = .small
     progressView.toolTip = "Loading children"
 
+    retryButton.translatesAutoresizingMaskIntoConstraints = false
+    retryButton.image = NSImage(
+      systemSymbolName: "arrow.clockwise",
+      accessibilityDescription: "Retry loading children"
+    ) ?? NSImage()
+    retryButton.isBordered = false
+    retryButton.imagePosition = .imageOnly
+    retryButton.target = self
+    retryButton.action = #selector(retry)
+    retryButton.isHidden = true
+
     addSubview(iconView)
     addSubview(nameField)
     addSubview(unloadedView)
     addSubview(progressView)
+    addSubview(retryButton)
     NSLayoutConstraint.activate([
       iconView.leadingAnchor.constraint(equalTo: leadingAnchor),
       iconView.centerYAnchor.constraint(equalTo: centerYAnchor),
@@ -128,7 +145,11 @@ private final class DemoNativeFileTreeRowView: NSView {
       progressView.centerXAnchor.constraint(equalTo: unloadedView.centerXAnchor),
       progressView.centerYAnchor.constraint(equalTo: unloadedView.centerYAnchor),
       progressView.widthAnchor.constraint(equalToConstant: 12),
-      progressView.heightAnchor.constraint(equalToConstant: 12)
+      progressView.heightAnchor.constraint(equalToConstant: 12),
+      retryButton.centerXAnchor.constraint(equalTo: unloadedView.centerXAnchor),
+      retryButton.centerYAnchor.constraint(equalTo: unloadedView.centerYAnchor),
+      retryButton.widthAnchor.constraint(equalToConstant: 16),
+      retryButton.heightAnchor.constraint(equalToConstant: 16)
     ])
   }
 
@@ -140,8 +161,10 @@ private final class DemoNativeFileTreeRowView: NSView {
   func update(
     node: FileTreePath,
     context: FileTreeRowContext<String>,
-    icons: FileTreeIcons
+    icons: FileTreeIcons,
+    onRetry: @escaping () -> Void
   ) {
+    self.onRetry = onRetry
     nameField.stringValue = context.displayedPathSegments.joined(separator: " / ")
     let icon = icons.image(for: node, isExpanded: context.isExpanded)
     iconView.image = icon
@@ -149,6 +172,7 @@ private final class DemoNativeFileTreeRowView: NSView {
 
     unloadedView.isHidden = true
     progressView.isHidden = true
+    retryButton.isHidden = true
     progressView.stopAnimation(nil)
     guard node.kind == .directory else { return }
 
@@ -158,8 +182,17 @@ private final class DemoNativeFileTreeRowView: NSView {
     case .loading:
       progressView.isHidden = false
       progressView.startAnimation(nil)
+    case .failed(let failure):
+      retryButton.isHidden = false
+      retryButton.toolTip = failure.message
+      retryButton.setAccessibilityLabel("Retry loading children")
+      retryButton.setAccessibilityHelp(failure.message)
     case .loaded:
       break
     }
+  }
+
+  @objc private func retry() {
+    onRetry?()
   }
 }

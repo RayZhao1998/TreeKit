@@ -17,7 +17,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     /// concrete adapter without changing native rendering code.
     private var hierarchyQuery: PreparedTreeHierarchyQuery<Node>
 
-    /// The loading state for a lazy provider's root collection.
+    /// The loading or retained failure state for a lazy provider's root collection.
     ///
     /// Eager models are always `.loaded`. Lazy models begin `.unloaded` and fetch roots when a
     /// renderer mounts or when ``loadRoots()`` is called explicitly.
@@ -119,6 +119,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     internal var lazyChildOperationsByID: [Node.ID: FileTreeLazyLoadOperation<Node>] = [:]
     internal var requestLazyRootLoad: (@MainActor () -> Void)?
     internal var requestLazyChildrenLoad: (@MainActor (Set<Node.ID>) -> Bool)?
+    internal var requestLazyChildrenRetry: (@MainActor (Set<Node.ID>) -> Bool)?
 
     /// Creates a stable tree model from prepared data.
     public init(
@@ -274,6 +275,7 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         lazyExpandAllRequested = false
         requestLazyRootLoad = nil
         requestLazyChildrenLoad = nil
+        requestLazyChildrenRetry = nil
         rootLoadState = .loaded
     }
 
@@ -817,6 +819,11 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
         requestLazyRootLoad?()
     }
 
+    internal func retryLazyRootLoadingIfFailed() {
+        guard case .failed = rootLoadState else { return }
+        requestLazyRootLoad?()
+    }
+
     @discardableResult
     internal func startLazyChildrenLoadingIfNeeded(for id: Node.ID) -> Bool {
         startLazyChildrenLoadingIfNeeded(for: [id])
@@ -825,6 +832,12 @@ public final class FileTreeModel<Node: Identifiable>: ObservableObject {
     @discardableResult
     internal func startLazyChildrenLoadingIfNeeded(for ids: Set<Node.ID>) -> Bool {
         requestLazyChildrenLoad?(ids) ?? false
+    }
+
+    @discardableResult
+    internal func retryLazyChildrenLoadingIfFailed(for id: Node.ID) -> Bool {
+        guard case .failed = childrenLoadState(for: id) else { return false }
+        return requestLazyChildrenRetry?([id]) ?? false
     }
 
     internal func publishLoadStateChange(for ids: Set<Node.ID> = []) {

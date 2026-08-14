@@ -26,24 +26,47 @@ returned by the provider.
 
 `mightHaveChildren` lets TreeKit present disclosure before a directory has known children.
 Expanding it transitions ``FileTreeRowContext/childrenLoadState`` from
-``FileTreeChildrenLoadState/unloaded`` through ``FileTreeChildrenLoadState/loading`` to
-``FileTreeChildrenLoadState/loaded``.
+``FileTreeChildrenLoadState/unloaded`` through ``FileTreeChildrenLoadState/loading`` to either
+``FileTreeChildrenLoadState/loaded`` or ``FileTreeChildrenLoadState/failed(_:)``.
 
 ```swift
 FileTree(model: model) { node, context in
     HStack {
         Text(node.name)
         Spacer()
-        if context.childrenLoadState == .loading {
+        switch context.childrenLoadState {
+        case .loading:
             ProgressView().controlSize(.small)
+        case .failed(let failure):
+            Button("Retry") {
+                Task { try? await model.retryChildren(of: context.id) }
+            }
+            .help(failure.message)
+        case .unloaded, .loaded:
+            EmptyView()
         }
     }
 }
 ```
 
-Use ``FileTreeModel/rootLoadState`` for a root-level placeholder because no row exists until roots
-arrive. A successful child result is retained for the model lifetime, including an empty result,
-so collapse and re-expansion do not fetch it again.
+Use ``FileTreeModel/rootLoadState`` for root-level state because no row exists until roots arrive,
+and call ``FileTreeModel/retryRoots()`` after a root failure. TreeKit's default SwiftUI, AppKit,
+and UIKit presentations include accessible progress and retry controls. A successful child result
+is retained for the model lifetime, including an empty result, so collapse and re-expansion do not
+fetch it again.
+
+## Handle failures and retry
+
+``FileTreeLoadFailure`` retains the provider's concrete error as `underlyingError` and a default
+localized `message`. Custom rows can cast the underlying error and provide product-specific copy;
+TreeKit never inserts a synthetic loading or error `Node`.
+
+Root and child failures remain attached to their real surface until retry, reset, or a successful
+result changes the state. ``FileTreeModel/retryRoots()`` and
+``FileTreeModel/retryChildren(of:)`` use the same operation registry as initial loads, so repeated
+retry actions join one provider request. A successful retry validates and publishes the complete
+result atomically, then clears the failure. Failure and retry preserve current selection, focus,
+expansion intent, loaded siblings, and mounted-row identity.
 
 ## Coordinate overlapping requests
 
@@ -69,7 +92,7 @@ model reference and do not extend the lifetime of a discarded model.
 
 TreeKit validates and publishes discovered nodes, but the provider remains responsible for file
 system or service access, watching, persistence, and cache invalidation. Search operates over
-discovered nodes. Loading failures are currently thrown by ``FileTreeModel/loadRoots()`` and
-``FileTreeModel/loadChildren(of:)``. A current failure is shared by callers of that operation and
-returns the branch to `unloaded`; an obsolete failure cannot change the new generation. A later
-lifecycle layer can add persistent failure presentation and retry policy without synthetic nodes.
+discovered nodes. Loading failures are thrown by ``FileTreeModel/loadRoots()`` and
+``FileTreeModel/loadChildren(of:)`` and retained in the corresponding load state. A current failure
+is shared by callers of that operation; an obsolete failure cannot change the new generation.
+TreeKit owns retry coordination and state, while the provider continues to own the underlying I/O.

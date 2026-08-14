@@ -1,5 +1,34 @@
 import Foundation
 
+/// One retained failure from a lazy root or child request.
+///
+/// `underlyingError` preserves the provider's concrete error type so custom interfaces can cast
+/// it and choose product-specific wording. Equality and hashing use `id`, which identifies one
+/// failed request even when two provider errors have identical descriptions.
+public struct FileTreeLoadFailure: Error, Identifiable, Hashable, Sendable {
+    public let id: UUID
+    public let underlyingError: any Error
+    public let message: String
+
+    public init(_ underlyingError: any Error) {
+        self.id = UUID()
+        self.underlyingError = underlyingError
+        self.message = underlyingError.localizedDescription
+    }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+extension FileTreeLoadFailure: LocalizedError {
+    public var errorDescription: String? { message }
+}
+
 /// The availability of one branch's children in a provider-backed tree.
 public enum FileTreeChildrenLoadState: Equatable, Hashable, Sendable {
     /// Children have not been requested yet.
@@ -8,8 +37,17 @@ public enum FileTreeChildrenLoadState: Equatable, Hashable, Sendable {
     /// A request is currently awaiting the provider.
     case loading
 
+    /// The most recent request failed and can be retried without replacing the real tree node.
+    case failed(FileTreeLoadFailure)
+
     /// The provider has returned the complete child collection, including an empty collection.
     case loaded
+
+    /// The retained provider failure when this state is ``failed(_:)``.
+    public var failure: FileTreeLoadFailure? {
+        guard case .failed(let failure) = self else { return nil }
+        return failure
+    }
 }
 
 /// Asynchronous hierarchy callbacks for a tree whose nodes should be discovered on demand.
@@ -250,6 +288,15 @@ public extension FileTreeModel where Node: Sendable, Node.ID: Sendable {
         return try await value(from: operation)
     }
 
+    /// Retries root discovery, joining an already-running retry when one exists.
+    ///
+    /// Calling this before a failure is harmless and follows the same cache and coalescing rules
+    /// as ``loadRoots()``.
+    @discardableResult
+    func retryRoots() async throws -> [Node] {
+        try await loadRoots()
+    }
+
     /// Loads and publishes one discovered node's children.
     ///
     /// Concurrent requests for the same node share one provider operation. A successful result is
@@ -266,10 +313,22 @@ public extension FileTreeModel where Node: Sendable, Node.ID: Sendable {
         if let operation = lazyChildOperationsByID[id] {
             return try await value(from: operation)
         }
-        guard let operation = beginLazyChildOperations(for: [id])[id] else {
+        guard let operation = beginLazyChildOperations(
+            for: [id],
+            retryingFailures: true
+        )[id] else {
             return lazyChildrenByID[id] ?? []
         }
         return try await value(from: operation)
+    }
+
+    /// Retries one branch, joining an already-running retry when one exists.
+    ///
+    /// The real node retains selection, focus, and expansion state while the provider runs; no
+    /// synthetic loading or error node is inserted into the hierarchy.
+    @discardableResult
+    func retryChildren(of id: Node.ID) async throws -> [Node] {
+        try await loadChildren(of: id)
     }
 }
 
@@ -304,6 +363,9 @@ extension FileTreeModel {
         }
         requestLazyChildrenLoad = { [weak self] ids in
             !(self?.beginLazyChildOperations(for: ids).isEmpty ?? true)
+        }
+        requestLazyChildrenRetry = { [weak self] ids in
+            !(self?.beginLazyChildOperations(for: ids, retryingFailures: true).isEmpty ?? true)
         }
     }
 
@@ -364,14 +426,21 @@ extension FileTreeModel {
 
     @discardableResult
     private func beginLazyChildOperations(
-        for ids: Set<Node.ID>
+        for ids: Set<Node.ID>,
+        retryingFailures: Bool = false
     ) -> [Node.ID: FileTreeLazyLoadOperation<Node>]
     where Node: Sendable, Node.ID: Sendable {
         guard let provider = lazyChildrenProvider else { return [:] }
         let orderedIDs = knownNodeIDsInPreorder.filter {
-            ids.contains($0)
-                && lazyChildrenLoadStates[$0] == .unloaded
-                && lazyChildOperationsByID[$0] == nil
+            guard ids.contains($0), lazyChildOperationsByID[$0] == nil else { return false }
+            switch lazyChildrenLoadStates[$0] {
+            case .unloaded:
+                return true
+            case .failed:
+                return retryingFailures
+            case .loading, .loaded, nil:
+                return false
+            }
         }
         guard !orderedIDs.isEmpty else { return [:] }
 
@@ -462,7 +531,7 @@ extension FileTreeModel {
         switch result {
         case .failure(let error):
             lazyRootOperation = nil
-            rootLoadState = .unloaded
+            rootLoadState = .failed(FileTreeLoadFailure(error))
             publishLoadStateChange()
             guard lazyLoadGeneration == generation else { return .obsolete }
             return .failure(error)
@@ -506,7 +575,7 @@ extension FileTreeModel {
                       lazyRootOperation?.token == token
                 else { return .obsolete }
                 lazyRootOperation = nil
-                rootLoadState = .unloaded
+                rootLoadState = .failed(FileTreeLoadFailure(error))
                 publishLoadStateChange()
                 guard lazyLoadGeneration == generation else { return .obsolete }
                 return .failure(error)
@@ -529,7 +598,7 @@ extension FileTreeModel {
         switch result {
         case .failure(let error):
             lazyChildOperationsByID[id] = nil
-            lazyChildrenLoadStates[id] = .unloaded
+            lazyChildrenLoadStates[id] = .failed(FileTreeLoadFailure(error))
             publishLoadStateChange(for: [id])
             guard lazyLoadGeneration == generation else { return .obsolete }
             return .failure(error)
@@ -578,7 +647,7 @@ extension FileTreeModel {
                       lazyChildOperationsByID[id]?.token == token
                 else { return .obsolete }
                 lazyChildOperationsByID[id] = nil
-                lazyChildrenLoadStates[id] = .unloaded
+                lazyChildrenLoadStates[id] = .failed(FileTreeLoadFailure(error))
                 publishLoadStateChange(for: [id])
                 guard lazyLoadGeneration == generation else { return .obsolete }
                 return .failure(error)

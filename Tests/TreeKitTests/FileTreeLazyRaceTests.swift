@@ -461,7 +461,7 @@ struct FileTreeLazyRaceTests {
     }
 
     @Test
-    func concurrentRootWaitersReceiveOneSharedFailureAndOneUnloadedPublication() async throws {
+    func concurrentRootWaitersReceiveOneSharedFailureAndOneFailedPublication() async throws {
         let failure = LazyRaceProbeError.rejected("current failure")
         let probe = LazyRaceProbe()
         let model = makeModel(probe: probe)
@@ -485,7 +485,11 @@ struct FileTreeLazyRaceTests {
             try await second.value
         }
 
-        #expect(model.rootLoadState == .unloaded)
+        guard case .failed(let storedFailure) = model.rootLoadState else {
+            Issue.record("Expected the shared root failure to remain visible")
+            return
+        }
+        #expect(storedFailure.underlyingError as? LazyRaceProbeError == failure)
         #expect(model.loadRevision == loadRevisionWhileLoading + 1)
         #expect(model.revision == revisionWhileLoading + 1)
         #expect(model.preparedTree.count == 0)
@@ -493,7 +497,7 @@ struct FileTreeLazyRaceTests {
     }
 
     @Test
-    func concurrentChildWaitersReceiveOneSharedFailureAndOneUnloadedPublication() async throws {
+    func concurrentChildWaitersReceiveOneSharedFailureAndOneFailedPublication() async throws {
         let root = LazyRaceNode("root", mightHaveChildren: true)
         let failure = LazyRaceProbeError.rejected("current child failure")
         let probe = LazyRaceProbe(immediateRoots: [root])
@@ -519,7 +523,11 @@ struct FileTreeLazyRaceTests {
             try await second.value
         }
 
-        #expect(model.childrenLoadState(for: root.id) == .unloaded)
+        guard case .failed(let storedFailure) = model.childrenLoadState(for: root.id) else {
+            Issue.record("Expected the shared child failure to remain on its branch")
+            return
+        }
+        #expect(storedFailure.underlyingError as? LazyRaceProbeError == failure)
         #expect(model.loadRevision == loadRevisionWhileLoading + 1)
         #expect(model.revision == revisionWhileLoading + 1)
         #expect(model.preparedTree.nodes.map(\.id) == [root.id])

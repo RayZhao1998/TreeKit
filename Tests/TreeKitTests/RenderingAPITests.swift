@@ -5,6 +5,50 @@ import SwiftUI
 import Testing
 @testable import TreeKit
 
+private enum RenderingLazyFailure: LocalizedError, Sendable {
+    case offline
+
+    var errorDescription: String? { "The Demo provider is offline." }
+}
+
+private actor RenderingLazyRootProbe {
+    private let root: FileTreePath
+    private var calls = 0
+
+    init(root: FileTreePath) {
+        self.root = root
+    }
+
+    func loadRoots() throws -> [FileTreePath] {
+        calls += 1
+        if calls == 1 { throw RenderingLazyFailure.offline }
+        return [root]
+    }
+
+    func callCount() -> Int { calls }
+}
+
+private actor RenderingLazyChildProbe {
+    private let root: FileTreePath
+    private let child: FileTreePath
+    private var childCalls = 0
+
+    init(root: FileTreePath, child: FileTreePath) {
+        self.root = root
+        self.child = child
+    }
+
+    func loadRoots() -> [FileTreePath] { [root] }
+
+    func loadChildren() throws -> [FileTreePath] {
+        childCalls += 1
+        if childCalls == 1 { throw RenderingLazyFailure.offline }
+        return [child]
+    }
+
+    func callCount() -> Int { childCalls }
+}
+
 @MainActor
 struct RenderingAPITests {
     @Test
@@ -33,6 +77,70 @@ struct RenderingAPITests {
 
         view.reloadRows()
         _ = view.focusTree()
+    }
+
+    @Test
+    func appKitDefaultRootFailureCanRetryWithoutSyntheticRows() async throws {
+        let root = try FileTreePath(path: "Root/")
+        let probe = RenderingLazyRootProbe(root: root)
+        let provider = FileTreeChildrenProvider<FileTreePath>(
+            roots: { try await probe.loadRoots() },
+            mightHaveChildren: { $0.kind == .directory },
+            children: { _ in [] }
+        )
+        let model = FileTreeModel(childrenProvider: provider)
+        let view = FileTreeView(model: model)
+        let outlineView = try #require(findOutlineView(in: view))
+
+        await #expect(throws: RenderingLazyFailure.offline) {
+            try await model.loadRoots()
+        }
+        #expect(outlineView.numberOfRows == 0)
+        let retryButton = try #require(findVisibleButton(titled: "Retry", in: view))
+        #expect(retryButton.accessibilityLabel() == "Retry loading file tree")
+
+        retryButton.performClick(nil)
+        for _ in 0..<256 where model.rootLoadState != .loaded {
+            await Task.yield()
+        }
+
+        #expect(model.rootLoadState == .loaded)
+        #expect(outlineView.numberOfRows == 1)
+        #expect(await probe.callCount() == 2)
+    }
+
+    @Test
+    func appKitDoubleClickRetriesAFailedExpandedBranch() async throws {
+        let root = try FileTreePath(path: "Root/")
+        let child = try FileTreePath(path: "Root/Child.swift")
+        let probe = RenderingLazyChildProbe(root: root, child: child)
+        let provider = FileTreeChildrenProvider<FileTreePath>(
+            roots: { await probe.loadRoots() },
+            mightHaveChildren: { $0.kind == .directory },
+            children: { _ in try await probe.loadChildren() }
+        )
+        let model = FileTreeModel(childrenProvider: provider)
+        var configuration = FileTreeConfiguration()
+        configuration.expandsBranchesOnDoubleClick = true
+        let view = FileTreeView(model: model, configuration: configuration)
+        _ = try await model.loadRoots()
+        model.expand(root.id)
+
+        await #expect(throws: RenderingLazyFailure.offline) {
+            try await model.loadChildren(of: root.id)
+        }
+        #expect(model.expandedIDs == [root.id])
+        #expect(model.childrenLoadState(for: root.id).failure != nil)
+
+        view.handleDoubleClick(of: root.id)
+        for _ in 0..<256 where model.childrenLoadState(for: root.id) != .loaded {
+            await Task.yield()
+        }
+
+        #expect(model.childrenLoadState(for: root.id) == .loaded)
+        #expect(model.expandedIDs == [root.id])
+        #expect(model.preparedTree.contains(child.id))
+        #expect(await probe.callCount() == 2)
     }
 
     @Test
@@ -343,6 +451,18 @@ struct RenderingAPITests {
         for subview in view.subviews {
             if let outlineView = findOutlineView(in: subview) {
                 return outlineView
+            }
+        }
+        return nil
+    }
+
+    private func findVisibleButton(titled title: String, in view: NSView) -> NSButton? {
+        if let button = view as? NSButton, !button.isHidden, button.title == title {
+            return button
+        }
+        for subview in view.subviews {
+            if let button = findVisibleButton(titled: title, in: subview) {
+                return button
             }
         }
         return nil
