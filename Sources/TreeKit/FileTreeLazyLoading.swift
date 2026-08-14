@@ -40,6 +40,134 @@ public struct FileTreeChildrenProvider<Node: Identifiable> {
 
 extension FileTreeChildrenProvider: Sendable where Node: Sendable, Node.ID: Sendable {}
 
+// Lazy entry points require Sendable nodes, while eager FileTreeModel remains intentionally
+// unconstrained. These wrappers bridge that conditional boundary; every access stays on the
+// model's main actor.
+internal enum FileTreeLazyLoadOutcome<Node>: @unchecked Sendable {
+    case success([Node])
+    case failure(any Error)
+    case obsolete
+}
+
+internal final class FileTreeLazyLoadSignal<Node>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var outcome: FileTreeLazyLoadOutcome<Node>?
+    private var isInvalidated = false
+    private var waiters: [UUID: CheckedContinuation<FileTreeLazyLoadOutcome<Node>, any Error>] = [:]
+    private var cancelledBeforeRegistration: Set<UUID> = []
+
+    func value() async throws -> FileTreeLazyLoadOutcome<Node> {
+        let id = UUID()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                lock.lock()
+                if isInvalidated || cancelledBeforeRegistration.remove(id) != nil {
+                    lock.unlock()
+                    continuation.resume(throwing: CancellationError())
+                } else if let outcome {
+                    lock.unlock()
+                    continuation.resume(returning: outcome)
+                } else {
+                    waiters[id] = continuation
+                    lock.unlock()
+                }
+            }
+        } onCancel: {
+            cancelWaiter(id)
+        }
+    }
+
+    func resolve(_ outcome: FileTreeLazyLoadOutcome<Node>) -> FileTreeLazyLoadOutcome<Node> {
+        lock.lock()
+        guard !isInvalidated, self.outcome == nil else {
+            lock.unlock()
+            return outcome
+        }
+        self.outcome = outcome
+        let pending = Array(waiters.values)
+        waiters = [:]
+        cancelledBeforeRegistration = []
+        lock.unlock()
+        for continuation in pending {
+            continuation.resume(returning: outcome)
+        }
+        return outcome
+    }
+
+    func invalidate() {
+        lock.lock()
+        guard !isInvalidated, outcome == nil else {
+            lock.unlock()
+            return
+        }
+        isInvalidated = true
+        let pending = Array(waiters.values)
+        waiters = [:]
+        cancelledBeforeRegistration = []
+        lock.unlock()
+        for continuation in pending {
+            continuation.resume(throwing: CancellationError())
+        }
+    }
+
+    private func cancelWaiter(_ id: UUID) {
+        lock.lock()
+        if let continuation = waiters.removeValue(forKey: id) {
+            lock.unlock()
+            continuation.resume(throwing: CancellationError())
+        } else {
+            if !isInvalidated, outcome == nil {
+                cancelledBeforeRegistration.insert(id)
+            }
+            lock.unlock()
+        }
+    }
+}
+
+internal struct FileTreeLazyLoadOperation<Node>: @unchecked Sendable {
+    let generation: UInt64
+    let token: UInt64
+    let task: Task<FileTreeLazyLoadOutcome<Node>, Never>
+    let signal: FileTreeLazyLoadSignal<Node>
+}
+
+/// Cancels renderer-started provider work when its model is released.
+///
+/// `FileTreeModel` cannot inspect its generic operation dictionaries from its nonisolated
+/// deinitializer when `Node.ID` is not unconditionally `Sendable`. Keeping only type-erased,
+/// thread-safe cancellation actions here gives the owner a generic-independent lifetime hook.
+internal final class FileTreeLazyOperationLifetime: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancellations: [UInt64: @Sendable () -> Void] = [:]
+
+    func register(token: UInt64, cancellation: @escaping @Sendable () -> Void) {
+        lock.lock()
+        cancellations[token] = cancellation
+        lock.unlock()
+    }
+
+    func remove(token: UInt64) {
+        lock.lock()
+        cancellations[token] = nil
+        lock.unlock()
+    }
+
+    func cancelAll() {
+        lock.lock()
+        let pending = Array(cancellations.values)
+        cancellations = [:]
+        lock.unlock()
+
+        for cancel in pending {
+            cancel()
+        }
+    }
+
+    deinit {
+        cancelAll()
+    }
+}
+
 public extension FileTreeModel where Node: Sendable, Node.ID: Sendable {
     /// Creates a model that discovers roots and branch children from an asynchronous provider.
     ///
@@ -74,109 +202,74 @@ public extension FileTreeModel where Node: Sendable, Node.ID: Sendable {
         )
     }
 
-    /// Loads and publishes provider roots. Repeated calls return the retained result.
-    @discardableResult
-    func loadRoots() async throws -> [Node] {
-        guard let provider = lazyChildrenProvider else { return preparedTree.roots }
-        if rootLoadState == .loaded { return lazyRootNodes }
-
-        if rootLoadState == .unloaded {
-            rootLoadState = .loading
-            publishLoadStateChange()
-        }
-
+    /// Replaces the current hierarchy with a new provider-backed generation.
+    ///
+    /// In-flight work from the previous generation is cancelled before the old hierarchy is
+    /// removed. Providers that ignore cancellation may still finish, but their results cannot
+    /// mutate this model. Roots remain `.unloaded`; call ``loadRoots()`` explicitly when replacing
+    /// a provider on an already-mounted model.
+    func reset(
+        childrenProvider: FileTreeChildrenProvider<Node>,
+        initialExpansion: FileTreeInitialExpansion<Node.ID> = .collapsed,
+        initialSelection: Set<Node.ID> = []
+    ) {
+        let emptyTree: PreparedTree<Node>
         do {
-            let roots = try await provider.roots()
-            let staged = try makeLazySnapshot(
-                roots: roots,
-                childrenByID: [:]
-            )
-            var potentialIDs: Set<Node.ID> = []
-            var states: [Node.ID: FileTreeChildrenLoadState] = [:]
-            classifyLazyNodes(
-                roots,
-                provider: provider,
-                potentialIDs: &potentialIDs,
-                states: &states
-            )
-
-            lazyRootNodes = roots
-            lazyChildrenByID = [:]
-            lazyPotentiallyExpandableIDs = potentialIDs
-            lazyChildrenLoadStates = states
-            rootLoadState = .loaded
-
-            let initial = initialLazyState(in: staged, adding: roots)
-            let initialSelection = selectionApplyingLazyInitialState(initial)
-            replacePreparedTree(
-                staged,
-                expandedIDs: expandedIDs.union(initial.expandedIDs),
-                selection: initialSelection.selection,
-                focusedID: initialSelection.focusedID
-            )
-            startInitiallyExpandedLazyLoads()
-            return roots
+            emptyTree = try PreparedTree(roots: []) { _ in [] }
         } catch {
-            rootLoadState = .unloaded
-            publishLoadStateChange()
-            throw error
+            preconditionFailure("An empty tree cannot fail preparation: \(error)")
         }
+
+        clearLazyLoadingConfiguration()
+        fileTreePathMutationState = nil
+        pathFlattenEmptyDirectories = false
+        configureLazyLoading(
+            provider: childrenProvider,
+            initialExpansion: initialExpansion,
+            initialSelection: initialSelection
+        )
+        replacePreparedTree(
+            emptyTree,
+            expandedIDs: [],
+            selection: [],
+            focusedID: nil
+        )
     }
 
-    /// Loads and publishes one discovered node's children. Successful results are retained.
+    /// Loads and publishes provider roots.
+    ///
+    /// Concurrent calls in the same model generation await one shared provider operation.
+    /// Successful results are retained; provider replacement invalidates outstanding callers.
+    @discardableResult
+    func loadRoots() async throws -> [Node] {
+        guard lazyChildrenProvider != nil else { return preparedTree.roots }
+        if rootLoadState == .loaded { return lazyRootNodes }
+        guard let operation = lazyRootOperation ?? beginLazyRootOperation() else {
+            return lazyRootNodes
+        }
+        return try await value(from: operation)
+    }
+
+    /// Loads and publishes one discovered node's children.
+    ///
+    /// Concurrent requests for the same node share one provider operation. A successful result is
+    /// retained across collapse and re-expansion for the lifetime of the provider generation.
     @discardableResult
     func loadChildren(of id: Node.ID) async throws -> [Node] {
-        guard let provider = lazyChildrenProvider,
-              let node = knownNode(for: id)
+        guard lazyChildrenProvider != nil,
+              knownNode(for: id) != nil
         else { return preparedTree.children(of: id) }
 
         if lazyChildrenLoadStates[id] == .loaded {
             return lazyChildrenByID[id] ?? []
         }
-        if lazyChildrenLoadStates[id] == .unloaded {
-            lazyChildrenLoadStates[id] = .loading
-            publishLoadStateChange(for: [id])
+        if let operation = lazyChildOperationsByID[id] {
+            return try await value(from: operation)
         }
-
-        do {
-            let children = try await provider.children(node)
-            var nextChildrenByID = lazyChildrenByID
-            nextChildrenByID[id] = children
-            let staged = try makeLazySnapshot(
-                roots: lazyRootNodes,
-                childrenByID: nextChildrenByID
-            )
-
-            var potentialIDs = lazyPotentiallyExpandableIDs
-            potentialIDs.remove(id)
-            var states = lazyChildrenLoadStates
-            states[id] = .loaded
-            classifyLazyNodes(
-                children,
-                provider: provider,
-                potentialIDs: &potentialIDs,
-                states: &states
-            )
-
-            lazyChildrenByID = nextChildrenByID
-            lazyPotentiallyExpandableIDs = potentialIDs
-            lazyChildrenLoadStates = states
-
-            let initial = initialLazyState(in: staged, adding: children)
-            let initialSelection = selectionApplyingLazyInitialState(initial)
-            replacePreparedTree(
-                staged,
-                expandedIDs: expandedIDs.union(initial.expandedIDs),
-                selection: initialSelection.selection,
-                focusedID: initialSelection.focusedID
-            )
-            startInitiallyExpandedLazyLoads()
-            return children
-        } catch {
-            lazyChildrenLoadStates[id] = .unloaded
-            publishLoadStateChange(for: [id])
-            throw error
+        guard let operation = beginLazyChildOperations(for: [id])[id] else {
+            return lazyChildrenByID[id] ?? []
         }
+        return try await value(from: operation)
     }
 }
 
@@ -207,13 +300,288 @@ extension FileTreeModel {
         lazyInitialSelection = initialSelection
         rootLoadState = .unloaded
         requestLazyRootLoad = { [weak self] in
-            Task { @MainActor [weak self] in
-                try? await self?.loadRoots()
+            _ = self?.beginLazyRootOperation()
+        }
+        requestLazyChildrenLoad = { [weak self] ids in
+            !(self?.beginLazyChildOperations(for: ids).isEmpty ?? true)
+        }
+    }
+
+    @discardableResult
+    private func beginLazyRootOperation() -> FileTreeLazyLoadOperation<Node>?
+    where Node: Sendable, Node.ID: Sendable {
+        if let lazyRootOperation {
+            return lazyRootOperation
+        }
+        guard rootLoadState != .loaded, let provider = lazyChildrenProvider else { return nil }
+
+        let generation = lazyLoadGeneration
+        lazyLoadSequence &+= 1
+        let token = lazyLoadSequence
+        let signal = FileTreeLazyLoadSignal<Node>()
+        let task = Task { @MainActor [weak self, provider] in
+            guard !Task.isCancelled else {
+                return signal.resolve(.obsolete)
+            }
+            do {
+                let roots = try await provider.roots()
+                guard !Task.isCancelled, let self else {
+                    return signal.resolve(.obsolete)
+                }
+                return signal.resolve(self.finishLazyRootLoad(
+                    .success(roots),
+                    provider: provider,
+                    generation: generation,
+                    token: token
+                ))
+            } catch {
+                guard !Task.isCancelled, let self else {
+                    return signal.resolve(.obsolete)
+                }
+                return signal.resolve(self.finishLazyRootLoad(
+                    .failure(error),
+                    provider: provider,
+                    generation: generation,
+                    token: token
+                ))
             }
         }
-        requestLazyChildrenLoad = { [weak self] id in
-            Task { @MainActor [weak self] in
-                try? await self?.loadChildren(of: id)
+        let operation = FileTreeLazyLoadOperation(
+            generation: generation,
+            token: token,
+            task: task,
+            signal: signal
+        )
+        lazyOperationLifetime.register(token: token) {
+            signal.invalidate()
+            task.cancel()
+        }
+        lazyRootOperation = operation
+        rootLoadState = .loading
+        publishLoadStateChange()
+        return operation
+    }
+
+    @discardableResult
+    private func beginLazyChildOperations(
+        for ids: Set<Node.ID>
+    ) -> [Node.ID: FileTreeLazyLoadOperation<Node>]
+    where Node: Sendable, Node.ID: Sendable {
+        guard let provider = lazyChildrenProvider else { return [:] }
+        let orderedIDs = knownNodeIDsInPreorder.filter {
+            ids.contains($0)
+                && lazyChildrenLoadStates[$0] == .unloaded
+                && lazyChildOperationsByID[$0] == nil
+        }
+        guard !orderedIDs.isEmpty else { return [:] }
+
+        let generation = lazyLoadGeneration
+        var startedOperations: [Node.ID: FileTreeLazyLoadOperation<Node>] = [:]
+        startedOperations.reserveCapacity(orderedIDs.count)
+        for id in orderedIDs {
+            guard let node = knownNode(for: id) else { continue }
+            lazyLoadSequence &+= 1
+            let token = lazyLoadSequence
+            let signal = FileTreeLazyLoadSignal<Node>()
+            let task = Task { @MainActor [weak self, provider, node] in
+                guard !Task.isCancelled else {
+                    return signal.resolve(.obsolete)
+                }
+                do {
+                    let children = try await provider.children(node)
+                    guard !Task.isCancelled, let self else {
+                        return signal.resolve(.obsolete)
+                    }
+                    return signal.resolve(self.finishLazyChildLoad(
+                        .success(children),
+                        of: id,
+                        provider: provider,
+                        generation: generation,
+                        token: token
+                    ))
+                } catch {
+                    guard !Task.isCancelled, let self else {
+                        return signal.resolve(.obsolete)
+                    }
+                    return signal.resolve(self.finishLazyChildLoad(
+                        .failure(error),
+                        of: id,
+                        provider: provider,
+                        generation: generation,
+                        token: token
+                    ))
+                }
+            }
+            let operation = FileTreeLazyLoadOperation(
+                generation: generation,
+                token: token,
+                task: task,
+                signal: signal
+            )
+            lazyOperationLifetime.register(token: token) {
+                signal.invalidate()
+                task.cancel()
+            }
+            lazyChildOperationsByID[id] = operation
+            startedOperations[id] = operation
+            lazyChildrenLoadStates[id] = .loading
+        }
+        publishLoadStateChange(for: Set(orderedIDs))
+        return startedOperations
+    }
+
+    private func value(
+        from operation: FileTreeLazyLoadOperation<Node>
+    ) async throws -> [Node] where Node: Sendable, Node.ID: Sendable {
+        let outcome = try await operation.signal.value()
+        try Task.checkCancellation()
+        guard lazyLoadGeneration == operation.generation else {
+            throw CancellationError()
+        }
+        switch outcome {
+        case .success(let nodes):
+            return nodes
+        case .failure(let error):
+            throw error
+        case .obsolete:
+            throw CancellationError()
+        }
+    }
+
+    private func finishLazyRootLoad(
+        _ result: Result<[Node], any Error>,
+        provider: FileTreeChildrenProvider<Node>,
+        generation: UInt64,
+        token: UInt64
+    ) -> FileTreeLazyLoadOutcome<Node> {
+        guard lazyLoadGeneration == generation,
+              lazyRootOperation?.token == token
+        else { return .obsolete }
+        defer { lazyOperationLifetime.remove(token: token) }
+
+        switch result {
+        case .failure(let error):
+            lazyRootOperation = nil
+            rootLoadState = .unloaded
+            publishLoadStateChange()
+            guard lazyLoadGeneration == generation else { return .obsolete }
+            return .failure(error)
+
+        case .success(let roots):
+            do {
+                let staged = try makeLazySnapshot(roots: roots, childrenByID: [:])
+                var potentialIDs: Set<Node.ID> = []
+                var states: [Node.ID: FileTreeChildrenLoadState] = [:]
+                classifyLazyNodes(
+                    roots,
+                    provider: provider,
+                    potentialIDs: &potentialIDs,
+                    states: &states
+                )
+                guard lazyLoadGeneration == generation,
+                      lazyRootOperation?.token == token
+                else { return .obsolete }
+
+                lazyRootOperation = nil
+                lazyRootNodes = roots
+                lazyChildrenByID = [:]
+                lazyPotentiallyExpandableIDs = potentialIDs
+                lazyChildrenLoadStates = states
+                rootLoadState = .loaded
+
+                let initial = initialLazyState(in: staged, adding: roots)
+                let initialSelection = selectionApplyingLazyInitialState(initial)
+                guard replacePreparedTree(
+                    staged,
+                    expandedIDs: expandedIDs.union(initial.expandedIDs),
+                    selection: initialSelection.selection,
+                    focusedID: initialSelection.focusedID,
+                    expectedLazyGeneration: generation
+                ) else { return .obsolete }
+                startInitiallyExpandedLazyLoads()
+                guard lazyLoadGeneration == generation else { return .obsolete }
+                return .success(roots)
+            } catch {
+                guard lazyLoadGeneration == generation,
+                      lazyRootOperation?.token == token
+                else { return .obsolete }
+                lazyRootOperation = nil
+                rootLoadState = .unloaded
+                publishLoadStateChange()
+                guard lazyLoadGeneration == generation else { return .obsolete }
+                return .failure(error)
+            }
+        }
+    }
+
+    private func finishLazyChildLoad(
+        _ result: Result<[Node], any Error>,
+        of id: Node.ID,
+        provider: FileTreeChildrenProvider<Node>,
+        generation: UInt64,
+        token: UInt64
+    ) -> FileTreeLazyLoadOutcome<Node> {
+        guard lazyLoadGeneration == generation,
+              lazyChildOperationsByID[id]?.token == token
+        else { return .obsolete }
+        defer { lazyOperationLifetime.remove(token: token) }
+
+        switch result {
+        case .failure(let error):
+            lazyChildOperationsByID[id] = nil
+            lazyChildrenLoadStates[id] = .unloaded
+            publishLoadStateChange(for: [id])
+            guard lazyLoadGeneration == generation else { return .obsolete }
+            return .failure(error)
+
+        case .success(let children):
+            do {
+                var nextChildrenByID = lazyChildrenByID
+                nextChildrenByID[id] = children
+                let staged = try makeLazySnapshot(
+                    roots: lazyRootNodes,
+                    childrenByID: nextChildrenByID
+                )
+                var potentialIDs = lazyPotentiallyExpandableIDs
+                potentialIDs.remove(id)
+                var states = lazyChildrenLoadStates
+                states[id] = .loaded
+                classifyLazyNodes(
+                    children,
+                    provider: provider,
+                    potentialIDs: &potentialIDs,
+                    states: &states
+                )
+                guard lazyLoadGeneration == generation,
+                      lazyChildOperationsByID[id]?.token == token
+                else { return .obsolete }
+
+                lazyChildOperationsByID[id] = nil
+                lazyChildrenByID = nextChildrenByID
+                lazyPotentiallyExpandableIDs = potentialIDs
+                lazyChildrenLoadStates = states
+
+                let initial = initialLazyState(in: staged, adding: children)
+                let initialSelection = selectionApplyingLazyInitialState(initial)
+                guard replacePreparedTree(
+                    staged,
+                    expandedIDs: expandedIDs.union(initial.expandedIDs),
+                    selection: initialSelection.selection,
+                    focusedID: initialSelection.focusedID,
+                    expectedLazyGeneration: generation
+                ) else { return .obsolete }
+                startInitiallyExpandedLazyLoads()
+                guard lazyLoadGeneration == generation else { return .obsolete }
+                return .success(children)
+            } catch {
+                guard lazyLoadGeneration == generation,
+                      lazyChildOperationsByID[id]?.token == token
+                else { return .obsolete }
+                lazyChildOperationsByID[id] = nil
+                lazyChildrenLoadStates[id] = .unloaded
+                publishLoadStateChange(for: [id])
+                guard lazyLoadGeneration == generation else { return .obsolete }
+                return .failure(error)
             }
         }
     }

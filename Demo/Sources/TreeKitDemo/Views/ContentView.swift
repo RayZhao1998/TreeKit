@@ -7,6 +7,7 @@ struct ContentView: View {
   // FileTreeView observes the model directly. Keeping the reference in State preserves its
   // lifetime without invalidating this entire split view for every expansion or selection.
   @State private var model: FileTreeModel<FileTreePath>
+  @StateObject private var lazyRaceController: DemoLazyRaceController
   @State private var renderer: DemoRenderer
   @State private var dataSource: DemoDataSource
   @State private var configuration: FileTreeConfiguration
@@ -18,7 +19,12 @@ struct ContentView: View {
     let environment = ProcessInfo.processInfo.environment
     let dataSource = environment["TREEKIT_DEMO_DATA_SOURCE"]
       .flatMap(DemoDataSource.init(rawValue:)) ?? .eager
-    _model = State(initialValue: DemoData.makeModel(dataSource: dataSource))
+    let lazyRaceController = DemoData.makeLazyRaceController()
+    _lazyRaceController = StateObject(wrappedValue: lazyRaceController)
+    _model = State(initialValue: DemoData.makeModel(
+      dataSource: dataSource,
+      lazyRaceController: lazyRaceController
+    ))
     _dataSource = State(initialValue: dataSource)
     let renderer = environment["TREEKIT_PERF_RENDERER"]
       .flatMap(DemoRenderer.init(rawValue:)) ?? .swiftUI
@@ -46,7 +52,9 @@ struct ContentView: View {
 
         ComponentSettingsView(
           model: model,
+          lazyRaceController: lazyRaceController,
           renderer: renderer,
+          dataSource: dataSource,
           allowsPathMutations: dataSource == .eager,
           configuration: $configuration,
           rowStyle: $rowStyle,
@@ -59,7 +67,11 @@ struct ContentView: View {
     }
     .frame(minWidth: 860, minHeight: 560)
     .onChange(of: dataSource) { nextDataSource in
-      model = DemoData.makeModel(dataSource: nextDataSource)
+      lazyRaceController.prepareForModelReplacement()
+      model = DemoData.makeModel(
+        dataSource: nextDataSource,
+        lazyRaceController: lazyRaceController
+      )
     }
     .task {
       await runPerformanceScenarioIfRequested()

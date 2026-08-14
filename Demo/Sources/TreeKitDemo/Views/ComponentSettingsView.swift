@@ -4,7 +4,9 @@ import TreeKit
 @MainActor
 struct ComponentSettingsView: View {
   @ObservedObject var model: FileTreeModel<FileTreePath>
+  @ObservedObject var lazyRaceController: DemoLazyRaceController
   let renderer: DemoRenderer
+  let dataSource: DemoDataSource
   let allowsPathMutations: Bool
   @Binding var configuration: FileTreeConfiguration
   @Binding var rowStyle: DemoRowStyle
@@ -18,7 +20,9 @@ struct ComponentSettingsView: View {
         modelSummary
         DemoControlPanel(
           model: model,
+          lazyRaceController: lazyRaceController,
           renderer: renderer,
+          dataSource: dataSource,
           allowsPathMutations: allowsPathMutations,
           configuration: $configuration,
           rowStyle: $rowStyle,
