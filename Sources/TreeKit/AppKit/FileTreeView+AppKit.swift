@@ -95,6 +95,21 @@ public final class FileTreeView<Node: Identifiable>: NSView {
         }
     }
 
+    internal func handleDoubleClick(of id: Node.ID) {
+        guard let node = model.knownNode(for: id) else { return }
+        if configuration.expandsBranchesOnDoubleClick,
+           model.isRenderedExpandable(id) {
+            if case .failed = model.childrenLoadState(for: id) {
+                model.expand(id)
+                model.retryLazyChildrenLoadingIfFailed(for: id)
+            } else {
+                model.toggleExpansion(of: id)
+            }
+        } else {
+            onActivate?(node)
+        }
+    }
+
     /// Makes the native outline view first responder.
     @discardableResult
     public func focusTree() -> Bool {
@@ -760,16 +775,9 @@ private extension FileTreeView {
             guard
                 let owner,
                 sender.clickedRow >= 0,
-                let box = sender.item(atRow: sender.clickedRow) as? ItemBox,
-                let node = owner.model.knownNode(for: box.id)
+                let box = sender.item(atRow: sender.clickedRow) as? ItemBox
             else { return }
-
-            if owner.configuration.expandsBranchesOnDoubleClick,
-               owner.model.isRenderedExpandable(box.id) {
-                owner.model.toggleExpansion(of: box.id)
-            } else {
-                owner.onActivate?(node)
-            }
+            owner.handleDoubleClick(of: box.id)
         }
 
         private func IDs(for item: Any?) -> [Node.ID] {

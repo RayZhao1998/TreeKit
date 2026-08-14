@@ -28,6 +28,27 @@ private actor RenderingLazyRootProbe {
     func callCount() -> Int { calls }
 }
 
+private actor RenderingLazyChildProbe {
+    private let root: FileTreePath
+    private let child: FileTreePath
+    private var childCalls = 0
+
+    init(root: FileTreePath, child: FileTreePath) {
+        self.root = root
+        self.child = child
+    }
+
+    func loadRoots() -> [FileTreePath] { [root] }
+
+    func loadChildren() throws -> [FileTreePath] {
+        childCalls += 1
+        if childCalls == 1 { throw RenderingLazyFailure.offline }
+        return [child]
+    }
+
+    func callCount() -> Int { childCalls }
+}
+
 @MainActor
 struct RenderingAPITests {
     @Test
@@ -85,6 +106,40 @@ struct RenderingAPITests {
 
         #expect(model.rootLoadState == .loaded)
         #expect(outlineView.numberOfRows == 1)
+        #expect(await probe.callCount() == 2)
+    }
+
+    @Test
+    func appKitDoubleClickRetriesAFailedExpandedBranch() async throws {
+        let root = try FileTreePath(path: "Root/")
+        let child = try FileTreePath(path: "Root/Child.swift")
+        let probe = RenderingLazyChildProbe(root: root, child: child)
+        let provider = FileTreeChildrenProvider<FileTreePath>(
+            roots: { await probe.loadRoots() },
+            mightHaveChildren: { $0.kind == .directory },
+            children: { _ in try await probe.loadChildren() }
+        )
+        let model = FileTreeModel(childrenProvider: provider)
+        var configuration = FileTreeConfiguration()
+        configuration.expandsBranchesOnDoubleClick = true
+        let view = FileTreeView(model: model, configuration: configuration)
+        _ = try await model.loadRoots()
+        model.expand(root.id)
+
+        await #expect(throws: RenderingLazyFailure.offline) {
+            try await model.loadChildren(of: root.id)
+        }
+        #expect(model.expandedIDs == [root.id])
+        #expect(model.childrenLoadState(for: root.id).failure != nil)
+
+        view.handleDoubleClick(of: root.id)
+        for _ in 0..<256 where model.childrenLoadState(for: root.id) != .loaded {
+            await Task.yield()
+        }
+
+        #expect(model.childrenLoadState(for: root.id) == .loaded)
+        #expect(model.expandedIDs == [root.id])
+        #expect(model.preparedTree.contains(child.id))
         #expect(await probe.callCount() == 2)
     }
 
